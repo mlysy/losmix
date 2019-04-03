@@ -1,0 +1,20 @@
+Package: losmix
+Title: Location-Scale Mixed-Effects Models
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Martin",
+           family = "Lysy",
+           role = c("aut", "cre"),
+           email = "mlysy@uwaterloo.ca")
+Description: Tools for fitting Gaussian linear mixed-effects models where both the mean and variance terms can be random.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: TMB
+LinkingTo: TMB
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+RoxygenNote: 6.1.1

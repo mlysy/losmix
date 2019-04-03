@@ -1,0 +1,266 @@
+---
+title: "losmix: Inference for Location-Scale Mixed-Effects Models"
+author: "Martin Lysy"
+date: "`r Sys.Date()`"
+output: 
+  html_vignette:
+    number_sections: false
+    toc: true
+bibliography: references.bib
+csl: taylor-and-francis-harvard-x.csl
+link-citations: true
+vignette: >
+  %\VignetteIndexEntry{Linear Mixed-Effects Location-Scale Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<!-- markdown setup -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  TeX: { equationNumbers: { autoNumber: "AMS" } }
+});
+</script>
+
+<!-- html-only macros -->
+\newcommand{\bm}[1]{\boldsymbol{#1}}
+\newcommand{\tx}[1]{\mathrm{#1}}
+
+\newcommand{\N}{\mathcal{N}}
+\newcommand\invchi{\mathop{\mbox{inv-$\chi^2$}}}
+\newcommand\NIX{\tx{NIX}}
+\newcommand{\mNIX}{\tx{mNIX}}
+\newcommand\CI{\tx{CI}}
+\newcommand{\iid}{\stackrel{\tx{iid}}{\sim}}
+\newcommand{\ind}{\stackrel{\tx{ind}}{\sim}}
+\newcommand{\s}{\sigma}
+\newcommand{\ig}{\tx{InvGamma}}
+\newcommand{\SSi}{{\bm{\Sigma}}}
+\newcommand{\OOm}{{\bm{\Omega}}}
+\newcommand{\Mu}{{\bm{\mu}}}
+<!-- \newcommand{\E}{{\rm I\kern-.3em E}} -->
+<!-- \newcommand{\Pb}{{\rm I\kern-.3em P}} -->
+\newcommand{\rv}[3][1]{#2_{#1},\ldots,#2_{#3}}
+\newcommand{\sumi}[3][i]{\sum_{#1 = #2}^{#3}}
+\newcommand{\yy}{{\bm y}}
+\newcommand{\xx}{{\bm x}}
+\newcommand{\zz}{{\bm z}}
+\newcommand{\YY}{{\bm Y}}
+\newcommand{\XX}{{\bm X}}
+\newcommand{\UU}{{\bm U}}
+\newcommand{\tth}{{\bm \theta}}
+\newcommand{\pph}{{\bm \phi}}
+\newcommand{\pps}{{\bm \psi}}
+\newcommand{\TTh}{{\bm \Theta}}
+\newcommand{\lla}{{\bm \lambda}}
+\newcommand{\aal}{{\bm \alpha}}
+\newcommand{\bbe}{{\bm \beta}}
+\newcommand{\oom}{{\bm \omega}}
+\newcommand{\bind}{\hat \beta^{\tx{std}}}
+\newcommand{\bpool}{\hat \beta^{\tx{pool}}}
+\newcommand{\ud}{\tx{d}}
+\newcommand{\argmax}{\operatorname{arg\,max}}
+\newcommand{\var}{\operatorname{var}}
+\newcommand{\logchol}{\operatorname{log-Chol}}
+\newcommand{\VV}{{\bm V}}
+
+```{r setup, include = FALSE}
+# r setup
+cran_link <- function(pkg, nm) {
+  if(missing(nm)) nm <- pkg
+  paste0("[**", nm, "**](https://CRAN.R-project.org/package=", pkg, ")")
+}
+# figure captions
+fig_label <- function(label, caption) {
+  labels <- c(attr(fig_label, "labels"), label)
+  n <- length(labels)
+  attr(fig_label, "labels") <<- labels 
+  paste0('<a name="', label, '"></a>Figure ', n, ': ', caption)
+}
+fig_ref <- function(label) {
+  n <- which(attr(fig_label, "labels") == label)
+  paste0("[", n, "](#", label, ")")
+}
+# section numbering
+section <- function(x) {
+  counter <- attr(section, "counter")
+  if(is.null(counter)) counter <- 0
+  counter <- counter + 1
+  attr(section, "counter") <<- counter
+  attr(subsection, "counter") <<- 0
+  paste0(counter, " ", x)
+}
+subsection <- function(x) {
+  counter <- attr(subsection, "counter")
+  if(is.null(counter)) counter <- 0
+  counter <- counter + 1
+  attr(subsection, "counter") <<- counter
+  paste0(attr(section, "counter"), ".", counter, " ", x)
+}
+```
+
+## `r section("Modeling Framework")`
+
+Let $y_{it}$ and $\xx_{it} = (\rv [i1] x {ip})$ denote the response and variable and covariate vector of individual $i$ at time $t$.  Let $\yy_i = (\rv [i1] y {iN_i})$ and $\XX_i = (\rv [i1] {\xx} {iN_i})$ denote the collection of $N_i$ measurements for individual $i$, and $\YY = (\rv {\yy} M)$ and $\XX = (\rv {\XX} M)$, the collection of all measuments for the $M$ observed individuals.
+
+The basic linear random-effects location-scale model we consider here is
+\begin{equation}
+\begin{aligned}
+y_{it} & \ind \N(\xx_{it}'\bbe_i, \sigma_i^2) \\
+(\bbe_i, \sigma_i^2) & \iid \mNIX(\lla, \OOm, \nu, \tau),
+\end{aligned}
+\label{eq:hlr}
+\end{equation}
+where the multivariate normal-inverse-chi-square (mNIX) distribution is defined as
+\begin{equation}
+(\bbe, \sigma^2) \iid \mNIX(\lla, \OOm, \nu, \tau) \qquad \iff \qquad 
+\begin{aligned}
+\sigma^2 & \sim \ig(\tfrac 1 2 \nu, \tfrac 1 2 \nu \tau) \\
+\bbe \mid \sigma & \sim \N(\lla, \sigma^2 \OOm^{-1}).
+\end{aligned}
+\label{eq:mnix}
+\end{equation}
+The advantage of using the mNIX random-effects distribution \\eqref{eq:mnix} is that it is the conjugate prior for $\tth_i = (\bbe_i, \s_i^2)$:
+\begin{equation*}
+\tth_i \mid \yy, \XX \ind \mNIX(\hat \lla_i, \hat \OOm_i, \hat \nu_i, \hat \tau_i),
+\end{equation*}
+where
+\begin{equation}
+\begin{aligned}
+\hat \OOm_i & = \XX_i'\XX_i + \OOm  
+& 
+\hat \nu_i & = N_i + \nu 
+\\
+\hat \lla_i & = \hat \OOm_i^{-1}(\OOm\lla + \XX_i'\yy_i) 
+& 
+\hat \tau_i & = \hat \nu_i^{-1}\big(\yy_i'\yy_i - \hat \lla_i \hat \OOm_i \hat \lla_i + \lla'\OOm\lla + \nu\tau\big).
+\end{aligned}
+\label{eq:phihat}
+\end{equation}
+Moreover, the marginal likelihood of the hyperparameters $\pph = (\lla, \OOm, \nu, \tau)$ is available in closed form:
+\begin{equation*}
+\ell(\pph \mid \YY, \XX) = M \Psi(\pph) - \sum_{i=1}^M \Psi(\hat \pph_i),
+\end{equation*}
+where
+\begin{equation*}
+\Psi(\pph) = \tfrac 1 2 \big[\log |\OOm| + \nu \log(\nu\tau/2) - 2\log \Gamma(\nu/2)\big],
+\end{equation*}
+and $\hat \pph_i = (\hat \lla_i, \hat \OOm_i, \hat \nu_i, \hat \tau_i)$ is given by \\eqref{eq:phihat}.
+
+### `r subsection("Covariate-Free Case")`
+
+A case of particular interest is when $\xx_{it} \equiv 1$.  In this case we typically relabel $\mu_i = \beta_{i1}$ and $\kappa = \OOm_{1\times 1}$, and the mNIX distribution reduces to a normal-inverse-chi-square (NIX).  That is, the random-effects distribution is $(\mu_i, \s_i^2) \iid \NIX(\lambda, \kappa, \nu, \tau)$, and the posterior distribution is also NIX with parameters
+\begin{equation}
+\begin{aligned}
+\hat \kappa_i & = N_i + \kappa & \hat \nu_i & = N_i + \nu \\
+\hat \lambda_i & = \hat \kappa_i^{-1}(\kappa\lambda + N_i \bar y_i) & \hat \tau_i & = \hat \nu_i^{-1}(\nu\tau + S_i + N_i\kappa/\hat \kappa_i(\bar y_i - \lambda)^2),
+\end{aligned}
+\label{eq:repostsimple}
+\end{equation}
+where $\bar y_i = \frac 1 {N_i} \sum_{t=1}^{N_i} y_{it}$ and $S_i = \sum_{t=1}^{N_i}(y_{it} - \bar y_i)^2$.
+
+## `r section("Bayesian Inference")`
+
+Given a hyperparameter prior $\pi(\pph)$, let $q(\pph \mid \YY, \XX) = \ell(\pph \mid \YY, \XX) + \log \pi(\pph)$, and calculate
+\begin{equation}
+\hat \pph = \argmax_{\pph} q(\pph \mid \YY, \XX), \qquad \hat \VV = - \left[\frac{\partial^2}{\partial \pph^2} q(\hat \pph \mid \YY, \XX)\right]^{-1}.
+\label{eq:hyperopt}
+\end{equation}
+Then for $M$ sufficiently large, the hyperparameter posterior distribution may be approximated as
+\begin{equation*}
+\pph \mid \YY, \XX \sim \N(\hat \pph, \hat \VV).
+\end{equation*}
+In order to estimate the random-effect $\tth_i = (\bbe_, \s_i^2)$ for a given observation $i$, simulate iid draws $\tth_i^{(1)}, \ldots, \tth_i^{(B)}$ via
+\begin{equation}
+\begin{aligned}
+\pph^{(b)} & \iid \N(\hat \pph, \hat \VV) \\
+\hat \tth_i^{(b)} \mid \pph^{(b)} & \ind \mNIX(\hat \lla_i^{(b)}, \hat \OOm_i^{(b)}, \hat \nu_i^{(b)}, \hat \tau_i^{(b)}),
+\end{aligned}
+\label{eq:repost}
+\end{equation}
+where $\hat \pph_i^{(b)} = (\hat \lla_i^{(b)}, \hat \OOm_i^{(b)}, \hat \nu_i^{(b)}, \hat \tau_i^{(b)})$ is calculated from \\eqref{eq:phihat} using $\yy_i$, $\XX_i$, and $\pph^{(b)}$.  Then the $B$ draws from \\eqref{eq:repost} are approximately iid draws from the random effects posterior distribution
+\begin{equation*}
+p(\tth_i \mid \YY, \XX) = \int p(\tth_i \mid \yy_i, \XX_i, \pph) p(\pph \mid \YY, \XX) \ud \pph.
+\end{equation*}
+
+Thus, the crux of the computational challenge lies in the optimization problem \\eqref{eq:hyperopt}.  To do this, **lmels** uses the R package `r cran_link("TMB")` [@kristensen.etal16] to leverage the power of [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation);  both the (approximate) logposterior $q(\pph \mid \YY, \XX)$ and its gradient are computed in C++, thus allowing for very fast quasi-Newton optimization algorithms to calculate $\hat \pph$.
+
+### `r subsection("Choice of Prior")`
+
+In order to specify the hyperparameter prior $\pi(\pph)$, we first switch to an unconstrained parametrization, namely
+\begin{equation}
+\pps = (\lla, \oom, \log \nu, \log \tau),
+\end{equation}
+where $\oom$ is a vector of length $p(p+1)/2$ corresponding to the upper Cholesky factor of $\OOm_{p \times p}$ but with the log of its diagonal elements.  In other words, if
+$$
+\UU_{p\times p} = \begin{bmatrix} 
+\exp(\omega_1) & \omega_2 & \cdots & \omega_{p(p-1)/2 + 1} \\
+0 & \exp(\omega_3) & \cdots & \omega_{p(p-1)/2 + 2} \\
+\vdots & & \ddots & \vdots \\
+0 & 0 & \cdots & \exp(\omega_{p(p-1)/2+p})
+\end{bmatrix},
+$$
+then $\UU$ is the unique upper-triangular matrix with positive diagonal elements such that $\OOm = \UU'\UU$.
+
+A straightforward choice of default prior is the standard uninformative prior $\pi(\pps) \propto 1$.  However, this prior is not invariant to permutation of the elements of $\OOm$ corresponding to relabeling the elements of $\bbe$.  In other words, if $\xx_{it} = (\tx{gender}_i, \tx{age}_i)$ for subject $i$, then inference with the prior $\pi(\pps) \propto 1$ will be different if instead we had $\xx_{it} = (\tx{age}_i, \tx{gender}_i)$.  In order to avoid this, consider instead the prior
+\begin{equation}
+\pi(\pps) \propto \prod_{j=1}^p U_{jj}^{p-j},
+\end{equation}
+where the $U_{jj}$ are easily obtained from $\oom$.  Then not only is Bayesian inference invariant to relabeling of $\xx_{it}$, but in fact also to any transformation $\tilde \xx_{it} = \bm{A} \xx_{it}$ for invertible $\bm A_{p \times p}$.
+
+## `r section("Example")`
+
+## `r section("Typical Usage")`
+
+Here are some functions we might need:
+
+- Let's assume that `dat` is a data frame with columns `id`, `y`, `x1`, `x2`, ..., `xp`.
+- `losmix_marg`: Posterior sampling from $p(\pph \mid \YY, \XX)$.
+- `losmix_cond`: Posterior sampling from $p(\tth_i \mid \YY_i, \XX_i, \pph)$.
+
+Then for mixed effect models, we'll need the following C++ things to be called from user's **TMB** code:
+
+- `mnix`: A class for the mNIX distribution.  Will contain methods to get/set sufficient statistics, hyperparameters of the conjugate prior/posterior.
+- `nix`: Same thing, but specialized for covariate-free case.
+- `mnix_zeta` and `nix_zeta`: Normalizing constants for `mnix` and `nix`.  
+
+How about from the R side?
+
+```{r, eval = FALSE}
+# 1.  TMB object for marginal distribution
+lp_obj <- TMB::MakeADFun(data = c(list(method = "lpmarg"), lp_data),
+                         parameters = lp_pars,
+                         DLL = "MyModel", silent = TRUE)
+
+# 2.  Sample from marginal distribution
+
+# 2a. Fit normal approximation
+psi_mean <- optim(par = lp_obj$par, fn = lp_obj$fn, gr = lp_obj$gr,
+                  method = "BFGS")
+psi_var <- losmix_mvar(obj, psi_mean, type = "numDeriv")
+
+# 2b. Sample from it
+nsamples <- 1e4
+Psi <- rmvn(nsamples, psi_mean, psi_var)
+
+# 3.  Sample from posterior random-effects distribution for a
+#     particular observation.
+sim_obj <- TMB::MakeADFun(data = c(list(method = "simcond"), sim_data),
+                          parameters = list(Psi = Psi),
+                          DLL = "MyModel", silent = TRUE)
+Theta <- sim_obj$simulate()
+```
+
+## `r section("Tests")`
+
+```{r test, fig.cap = fig_label("fig:test", "Test plot.")}
+plot(1:10)
+```
+
+Refering to Figure `r fig_ref("fig:test")`.
+
+## `r section("Model Extensions")`
+
+
+
+## `r section("References")`
