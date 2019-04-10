@@ -1,0 +1,29 @@
+#' Calculate the hyperparameters of the mNIX conjugate posterior distribution.
+#'
+#' @template param-id
+#' @template param-y
+#' @template param-X
+#' @param lambda Prior mean parameter.  A vector of length \code{p}, or a matrix of size \code{n x p}.
+#' @param Omega Prior precision matrix.  A matrix of size \code{p x p}, or an array of size \code{p x p x n}.
+#' @param tau Prior scale parameter.  A scalar or a vector of length \code{n}.
+#' @param nu Prior degrees-of-freedom.  A scalar or a vector of length \code{n}.
+#' @export
+mnix_post <- function(id, y, X, lambda, Omega, tau, nu) {
+  # format inputs
+  odata <- get_tmbdata(id = id, y = y, X = X)
+  p <- ncol(odata$X)
+  opars <- get_tmbpars(p = p, nData = length(odata$nObs),
+                       lambda = lambda, Omega = Omega, tau = tau, nu = nu)
+  odata <- c(list(model_name = "mNIX_post"), odata, opars)
+  obj <- TMB::MakeADFun(data = odata, parameters = list(theta = 0),
+                        silent = TRUE, DLL = "losmix_TMBExports")
+  out <- obj$simulate()
+  # relabel and reorder outputs
+  out_names <- c(lambda = "lambda_hat", Omega = "Omega_hat",
+                 tau = "tau_hat", nu = "nu_hat")
+  out <- out[out_names]
+  names(out) <- names(out_names)
+  out$lambda <- t(out$lambda)
+  out$Omega <- array(out$Omega, dim = c(p,p,opars$nPost))
+  out
+}

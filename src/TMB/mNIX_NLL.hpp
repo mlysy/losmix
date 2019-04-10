@@ -34,7 +34,7 @@ Type mNIX_NLL(objective_function<Type>* obj) {
   PARAMETER_VECTOR(Omega_LC); // Omega on the log-cholesky scale
   PARAMETER(nu);
   PARAMETER(tau);
-  matrix<Type> Omega = lchol2var(Omega_LC);
+  matrix<Type> Omega = utils<Type>::lchol2var(Omega_LC);
   // parameters of mNIX posterior
   int N = X.rows();
   int p = X.cols();
@@ -65,7 +65,7 @@ Type mNIX_NLL(objective_function<Type>* obj) {
     REPORT(tau_hat);
   }
   // normalizing constant
-  return .5 * (mNIX_zeta(Omega, nu, tau) - mNIX_zeta(Omega_hat, nu_hat, tau_hat));
+  return .5 * (mNIX<Type>::zeta(Omega, nu, tau) - mNIX<Type>::zeta(Omega_hat, nu_hat, tau_hat));
 }
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR this

@@ -10,7 +10,7 @@ bibliography: references.bib
 csl: taylor-and-francis-harvard-x.csl
 link-citations: true
 vignette: >
-  %\VignetteIndexEntry{Linear Mixed-Effects Location-Scale Models}
+  %\VignetteIndexEntry{Introduction to losmix}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -22,10 +22,9 @@ MathJax.Hub.Config({
 });
 </script>
 
-<!-- html-only macros -->
+<!-- latex macros -->
 \newcommand{\bm}[1]{\boldsymbol{#1}}
 \newcommand{\tx}[1]{\mathrm{#1}}
-
 \newcommand{\N}{\mathcal{N}}
 \newcommand\invchi{\mathop{\mbox{inv-$\chi^2$}}}
 \newcommand\NIX{\tx{NIX}}
@@ -38,8 +37,6 @@ MathJax.Hub.Config({
 \newcommand{\SSi}{{\bm{\Sigma}}}
 \newcommand{\OOm}{{\bm{\Omega}}}
 \newcommand{\Mu}{{\bm{\mu}}}
-<!-- \newcommand{\E}{{\rm I\kern-.3em E}} -->
-<!-- \newcommand{\Pb}{{\rm I\kern-.3em P}} -->
 \newcommand{\rv}[3][1]{#2_{#1},\ldots,#2_{#3}}
 \newcommand{\sumi}[3][i]{\sum_{#1 = #2}^{#3}}
 \newcommand{\yy}{{\bm y}}
@@ -65,38 +62,7 @@ MathJax.Hub.Config({
 \newcommand{\VV}{{\bm V}}
 
 ```{r setup, include = FALSE}
-# r setup
-cran_link <- function(pkg, nm) {
-  if(missing(nm)) nm <- pkg
-  paste0("[**", nm, "**](https://CRAN.R-project.org/package=", pkg, ")")
-}
-# figure captions
-fig_label <- function(label, caption) {
-  labels <- c(attr(fig_label, "labels"), label)
-  n <- length(labels)
-  attr(fig_label, "labels") <<- labels 
-  paste0('<a name="', label, '"></a>Figure ', n, ': ', caption)
-}
-fig_ref <- function(label) {
-  n <- which(attr(fig_label, "labels") == label)
-  paste0("[", n, "](#", label, ")")
-}
-# section numbering
-section <- function(x) {
-  counter <- attr(section, "counter")
-  if(is.null(counter)) counter <- 0
-  counter <- counter + 1
-  attr(section, "counter") <<- counter
-  attr(subsection, "counter") <<- 0
-  paste0(counter, " ", x)
-}
-subsection <- function(x) {
-  counter <- attr(subsection, "counter")
-  if(is.null(counter)) counter <- 0
-  counter <- counter + 1
-  attr(subsection, "counter") <<- counter
-  paste0(attr(section, "counter"), ".", counter, " ", x)
-}
+source("format.R")
 ```
 
 ## `r section("Modeling Framework")`
@@ -183,7 +149,7 @@ where $\hat \pph_i^{(b)} = (\hat \lla_i^{(b)}, \hat \OOm_i^{(b)}, \hat \nu_i^{(b
 p(\tth_i \mid \YY, \XX) = \int p(\tth_i \mid \yy_i, \XX_i, \pph) p(\pph \mid \YY, \XX) \ud \pph.
 \end{equation*}
 
-Thus, the crux of the computational challenge lies in the optimization problem \\eqref{eq:hyperopt}.  To do this, **lmels** uses the R package `r cran_link("TMB")` [@kristensen.etal16] to leverage the power of [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation);  both the (approximate) logposterior $q(\pph \mid \YY, \XX)$ and its gradient are computed in C++, thus allowing for very fast quasi-Newton optimization algorithms to calculate $\hat \pph$.
+Thus, the crux of the computational challenge lies in the optimization problem \\eqref{eq:hyperopt}.  To do this, **losmix** uses the R package `r cran_link("TMB")` [@kristensen.etal16] to leverage the power of [automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation);  both the (approximate) logposterior $q(\pph \mid \YY, \XX)$ and its gradient are computed in C++, thus allowing for very fast quasi-Newton optimization algorithms to calculate $\hat \pph$.
 
 ### `r subsection("Choice of Prior")`
 
@@ -251,13 +217,14 @@ sim_obj <- TMB::MakeADFun(data = c(list(method = "simcond"), sim_data),
 Theta <- sim_obj$simulate()
 ```
 
-## `r section("Tests")`
+## `r subsection("Tests")`
 
-```{r test, fig.cap = fig_label("fig:test", "Test plot.")}
-plot(1:10)
-```
+Might also want to define some utility functions on the R side, if only for testing the **TMB** code more easily.  
 
-Refering to Figure `r fig_ref("fig:test")`.
+- `*_suff`: Extract sufficient statistics from data, where `* = {mnix, nix}`.  This is really for testing purposes, so may not want to increase size of package due to compiled C++ code...
+- `*_post`: Posterior parameters from data + prior.
+- `*_marg`: Marginal hyperparameter distribution with default prior.
+- `*_sim`: Random draws.
 
 ## `r section("Model Extensions")`
 

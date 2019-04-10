@@ -8,22 +8,6 @@
 
 namespace losmix {
 
-  /// Normalizing constant for mNIX distribution.
-  ///
-  /// @param[in] Omega mNIX precision matrix.
-  /// @param[in] nu mNIX shape parameter.
-  /// @param[in] tau mNIX scale parameter.
-  /// @return The mNIX normalizing constant, defined as
-  /// \f[
-  /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|.
-  /// \f]
-  template <class Type>
-  Type mNIX_zeta(const matrix<Type>& Omega,
-		 const Type& nu, const Type& tau) {
-    return 2.0 * lgamma(.5 * nu) -
-      nu * log(.5 * tau*nu) - atomic::logdet(Omega);
-  }
-
   /// The multivariate Normal-Inverse-Chi-Square (mNIX) distribution.
   ///
   /// The multivariate normal-inverse-chi-squared (mNIX) distribution on a \f$p\f$-dimensional vector \f$x\$ and scalar \f$v\f$ is defined as
@@ -63,6 +47,12 @@ namespace losmix {
     // Cholesky solver
     Eigen::LDLT<Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> > ldlt_;
   public:
+    /// Typedef equivalent to `MatrixXd<Type>`.
+    typedef Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> MatrixXd_t;
+    /// Typedef equivalent to `Ref <MatrixXd<Type> >`
+    typedef Eigen::Ref <MatrixXd_t> RefMatrix_t;
+    /// Typedef equivalent to `const Ref <const MatrixXd<Type> >`
+    typedef const Eigen::Ref <const MatrixXd_t> cRefMatrix_t;
     /// Set prior parameters.
     void set_prior(const matrix<Type>& lambda,
 		   const matrix<Type>& Omega,
@@ -70,11 +60,26 @@ namespace losmix {
     /// Set sufficient statistics.
     void set_suff(const matrix<Type>& y, const matrix<Type>& X);
     /// Get sufficient statistics.
-    void get_suff(Type& yy, matrix<Type>& Xy, matrix<Type>& XX);
+    void get_suff(Type& yy, RefMatrix_t Xy, RefMatrix_t XX);
     /// Get posterior parameters.
-    void get_post(matrix<Type>& lambda_hat,
-		  matrix<Type>& Omega_hat,
+    void get_post(RefMatrix_t lambda_hat,
+		  RefMatrix_t Omega_hat,
 		  Type& nu_hat, Type& tau_hat);
+    /// Normalizing constant for mNIX distribution.
+    ///
+    /// @param[in] Omega mNIX precision matrix.
+    /// @param[in] nu mNIX shape parameter.
+    /// @param[in] tau mNIX scale parameter.
+    /// @return The mNIX normalizing constant, defined as
+    /// \f[
+    /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|.
+    /// \f]
+    static Type zeta(cRefMatrix_t& Omega,
+		     const Type& nu, const Type& tau) {
+      matrix<Type> Omega_ = Omega;
+      return 2.0 * lgamma(.5 * nu) -
+	nu * log(.5 * tau*nu) - atomic::logdet(Omega_);
+    }
   };
 
   /// @param[in] lambda Prior mean vector.
@@ -91,7 +96,7 @@ namespace losmix {
     tau_ = tau;
     // precomputations
     Ol_ = Omega_ * lambda_;
-    lOl_ = dot_product(lambda_, Ol_);
+    lOl_ = utils<Type>::dot_product(lambda_, Ol_);
     return;
   }
 
@@ -103,7 +108,7 @@ namespace losmix {
 				   const matrix<Type>& X) {
     XX_ = X.transpose() * X; // can't use .noalias()
     Xy_ = X.transpose() * y;
-    yy_ = dot_product(y, y);
+    yy_ = utils<Type>::dot_product(y, y);
     N_ = X.rows();
     return;
   }
@@ -119,8 +124,7 @@ namespace losmix {
   /// @param[out] yy Dot-product of response vector with itself.
   template <class Type>
   inline void mNIX<Type>::get_suff(Type& yy,
-				   matrix<Type>& Xy,
-				   matrix<Type>& XX) {
+				   RefMatrix_t Xy, RefMatrix_t XX) {
     XX = XX_;
     Xy = Xy_;
     yy = yy_;
@@ -132,15 +136,15 @@ namespace losmix {
   /// @param[out] nu_hat Posterior shape parameter.
   /// @param[out] tau_hat Posterior scale parameter.
   template <class Type>
-  inline void mNIX<Type>::get_post(matrix<Type>& lambda_hat,
-				   matrix<Type>& Omega_hat,
+  inline void mNIX<Type>::get_post(RefMatrix_t lambda_hat,
+				   RefMatrix_t Omega_hat,
 				   Type& nu_hat, Type& tau_hat) {
     Omega_hat = XX_ + Omega_;
     ldlt_.compute(Omega_hat);
     lambda_hat = ldlt_.solve(Ol_ + Xy_);
     nu_hat = nu_ + N_;
     Ol_hat_ = Omega_hat * lambda_hat;
-    tau_hat = yy_ - dot_product(lambda_hat, Ol_hat_) + lOl_ + nu_*tau_;
+    tau_hat = yy_ - utils<Type>::dot_product(lambda_hat, Ol_hat_) + lOl_ + nu_*tau_;
     tau_hat /= nu_hat;
     return;
   }

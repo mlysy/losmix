@@ -5,6 +5,19 @@ source("utils.R") # clean this up later
 # log-determinant
 ldet <- function(X) as.numeric(determinant(X)$modulus)
 
+# convert list of lists into list of numerics.
+# bind specifies binding function.
+unlist_bind <- function(x, name, bind) {
+  mapply(function(name, bind) {
+    do.call(bind, lapply(setNames(x, NULL), function(ls) ls[[name]]))
+  }, name = name, bind = bind, SIMPLIFY = FALSE)
+}
+
+# sort list on element names
+sort_names <- function(list) {
+  if(!is.null(nm <- names(list))) list[sort(nm)] else list
+}
+
 #--- simulation functions ------------------------------------------------------
 
 # simulate data
