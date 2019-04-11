@@ -28,6 +28,14 @@ namespace losmix {
   /// @note Due to how `TMB` treats `vector<Type>` objects, this class uses (one column) matrix inputs for vectors to do the linear algebra with minimal temporary assignments.
   template <class Type>
   class mNIX {
+  public:
+    //typedefs
+    /// Typedef equivalent to `matrix<Type>`.
+    typedef Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> MatrixXd_t;
+    /// Typedef equivalent to `Ref <matrix<Type> >`.
+    typedef Eigen::Ref <MatrixXd_t> RefMatrix_t;
+    /// Typedef equivalent to `const Ref <const matrix<Type> >`.
+    typedef const Eigen::Ref <const MatrixXd_t> cRefMatrix_t;
   private:
     int N_; // number of observations
     // prior parameters
@@ -35,6 +43,11 @@ namespace losmix {
     matrix<Type> Omega_;
     Type nu_;
     Type tau_;
+    // posterior parameters
+    matrix<Type> lambda_hat_;
+    matrix<Type> Omega_hat_;
+    Type nu_hat_;
+    Type tau_hat_;
     // sufficient statistics (data)
     matrix<Type> XX_;
     matrix<Type> Xy_;
@@ -45,14 +58,8 @@ namespace losmix {
     // posterior storage
     matrix<Type> Ol_hat_;
     // Cholesky solver
-    Eigen::LDLT<Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> > ldlt_;
+    Eigen::LDLT<MatrixXd_t> chol_Ohat_;
   public:
-    /// Typedef equivalent to `MatrixXd<Type>`.
-    typedef Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> MatrixXd_t;
-    /// Typedef equivalent to `Ref <MatrixXd<Type> >`
-    typedef Eigen::Ref <MatrixXd_t> RefMatrix_t;
-    /// Typedef equivalent to `const Ref <const MatrixXd<Type> >`
-    typedef const Eigen::Ref <const MatrixXd_t> cRefMatrix_t;
     /// Set prior parameters.
     void set_prior(const matrix<Type>& lambda,
 		   const matrix<Type>& Omega,
@@ -65,6 +72,16 @@ namespace losmix {
     void get_post(RefMatrix_t lambda_hat,
 		  RefMatrix_t Omega_hat,
 		  Type& nu_hat, Type& tau_hat);
+    /// Calculate posterior parameters to internal values.
+    ///
+    /// @warning Must be run after a call to `set_suff` and `set_prior`.
+    void calc_post() {
+      get_post(lambda_hat_, Omega_hat_, nu_hat_, tau_hat_);
+      return;
+    }
+    /// Normalizing constant for mNIX distribution.
+    Type zeta();
+    
     /// Normalizing constant for mNIX distribution.
     ///
     /// @param[in] Omega mNIX precision matrix.
@@ -135,19 +152,39 @@ namespace losmix {
   /// @param[out] Omega_hat Posterior precision matrix.
   /// @param[out] nu_hat Posterior shape parameter.
   /// @param[out] tau_hat Posterior scale parameter.
+  ///
+  /// @warning Must be run after a call to `set_suff` and `set_prior`.
   template <class Type>
   inline void mNIX<Type>::get_post(RefMatrix_t lambda_hat,
 				   RefMatrix_t Omega_hat,
 				   Type& nu_hat, Type& tau_hat) {
     Omega_hat = XX_ + Omega_;
-    ldlt_.compute(Omega_hat);
-    lambda_hat = ldlt_.solve(Ol_ + Xy_);
+    chol_Ohat_.compute(Omega_hat);
+    lambda_hat = chol_Ohat_.solve(Ol_ + Xy_);
     nu_hat = nu_ + N_;
     Ol_hat_ = Omega_hat * lambda_hat;
     tau_hat = yy_ - utils<Type>::dot_product(lambda_hat, Ol_hat_) + lOl_ + nu_*tau_;
     tau_hat /= nu_hat;
     return;
   }
+
+  /// @return The mNIX normalizing constant, defined as
+  /// \f[
+  /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|,
+  /// \f]
+  /// applied to the internal hyperparameter values of the conjugate posterior.
+  ///
+  /// @warning Must be run after a call to `calc_post`.
+  template <class Type>
+  inline Type mNIX<Type>::zeta() {
+    // log-determinant of chol(Omega_hat)
+    Type ldC = 0.0;
+    for(int ii=0; ii<chol_Ohat_.cols(); ii++) {
+      ldC += log(chol_Ohat_.matrixL()(ii,ii));
+    }
+    return 2.0 * (lgamma(.5 * nu_hat_) - ldC) -
+      nu_hat_ * log(.5 * tau_hat_*nu_hat_);
+  } 
 
 } // namespace losmix
 

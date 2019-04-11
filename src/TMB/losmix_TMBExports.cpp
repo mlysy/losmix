@@ -2,6 +2,7 @@
 
 #define TMB_LIB_INIT R_init_losmix_TMBExports
 #include <TMB.hpp>
+#include "mNIX_marg.hpp"
 #include "mNIX_NLL.hpp"
 #include "mNIX_post.hpp"
 #include "mNIX_suff.hpp"
@@ -9,7 +10,9 @@
 template<class Type>
 Type objective_function<Type>::operator() () {
   DATA_STRING(model_name);
-  if(model_name == "mNIX_NLL") {
+  if(model_name == "mNIX_marg") {
+    return mNIX_marg(this);
+  } else if(model_name == "mNIX_NLL") {
     return mNIX_NLL(this);
   } else if(model_name == "mNIX_post") {
     return mNIX_post(this);

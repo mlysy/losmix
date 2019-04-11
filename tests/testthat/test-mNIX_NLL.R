@@ -19,7 +19,7 @@ test_that("Sufficient statistics are the same in R and TMB", {
                           parameters = opars,
                           DLL = "losmix_TMBExports", silent = TRUE)
     suff_r <- get_suff(y, X)
-    suff_tmb <- obj$simulate(par = Phi2vec(sim_Phi(p)))[suff_names]
+    suff_tmb <- obj$simulate(par = vec_phi(sim_Phi(p)))[suff_names]
     expect_equal(suff_r, suff_tmb)
   }
 })
@@ -41,7 +41,7 @@ test_that("Conjugate posterior hyperparameters are the same in R and TMB", {
                           DLL = "losmix_TMBExports", silent = TRUE)
     Phi_hat_r <- get_post(suff = get_suff(y, X), Phi = Phi)
     Phi_hat_r$lambda <- as.matrix(Phi_hat_r$lambda)
-    Phi_hat_tmb <- obj$simulate(par = Phi2vec(Phi))[names(Phi_names)]
+    Phi_hat_tmb <- obj$simulate(par = vec_phi(Phi))[names(Phi_names)]
     names(Phi_hat_tmb) <- as.character(Phi_names)
     expect_equal(Phi_hat_r, Phi_hat_tmb)
   }
@@ -70,14 +70,14 @@ test_that("R(loglik + lprior) = TMB(lmarg + lcond)", {
     obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
                           parameters = opars,
                           DLL = "losmix_TMBExports", silent = TRUE)
-    Phi_hat <- obj$simulate(par = Phi2vec(Phi)) # conjugate posterior
+    Phi_hat <- obj$simulate(par = vec_phi(Phi)) # conjugate posterior
     Phi_hat <- setNames(Phi_hat[names(Phi_names)], as.character(Phi_names))
     Phi_hat$lambda <- c(Phi_hat$lambda)
     ll <- loglik(theta = theta, y = y, X = X)
     lpi <- logpi(theta = theta, Phi = Phi)
     lc <- logpi(theta, Phi = Phi_hat)
     # TMB returns NLL up to factor of N/2 * log(2*pi)
-    lm <- -obj$fn(Phi2vec(Phi)) - N/2 * log(2*pi)
+    lm <- -obj$fn(vec_phi(Phi)) - N/2 * log(2*pi)
     expect_equal(ll + lpi, lc + lm)
   }
 })

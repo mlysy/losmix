@@ -2,17 +2,11 @@
 ///
 /// Negative loglikelihood for the LOSMIX model.
 ///
+/// TODO:
+///
+/// - Convert `X` to `Xt = X.transpose()` inputs.
+///
 /// @note Depends on `TMB.hpp` which is *not* header-guarded, so don't include it here.
-///
-/// Tests the following:
-///
-/// - `template <class Type>` functions with `void` return type, for multi-argument assignment.
-/// - `LDLT` through the AD mechanism.
-///
-/// Conclusions:
-///
-/// - `TMB` uses `vector<CppAD>` for `vector<Type>`, but `Eigen::matrix` for `matrix<Type>`.  Therefore, matrix-vector operations typically don't work as we would expect.  Current approach is to explicitly convert vectors to one-column matrices via `.matrix()`, and use temporary matrices for intermediate calculations when needed.
-/// - Can't figure out how to initialize a defined matrix/vector<Type> of unknown size...
 
 #include "losmix/utils.hpp"
 #include "losmix/mNIX.hpp"
@@ -25,16 +19,14 @@ Type mNIX_NLL(objective_function<Type>* obj) {
   // data
   DATA_MATRIX(X);
   DATA_VECTOR(y);
-  // DATA_MATRIX(lambda_hat);
-  // DATA_MATRIX(Omega_hat);
-  // DATA_SCALAR(tau_hat);
-  // DATA_SCALAR(nu_hat);
   // hyperparameters
   PARAMETER_VECTOR(lambda);
-  PARAMETER_VECTOR(Omega_LC); // Omega on the log-cholesky scale
-  PARAMETER(nu);
-  PARAMETER(tau);
-  matrix<Type> Omega = utils<Type>::lchol2var(Omega_LC);
+  PARAMETER_VECTOR(logC_Omega); // Omega on the log-cholesky scale
+  PARAMETER(log_nu);
+  PARAMETER(log_tau);
+  matrix<Type> Omega = utils<Type>::lchol2var(logC_Omega);
+  Type nu = exp(log_nu);
+  Type tau = exp(log_tau);
   // parameters of mNIX posterior
   int N = X.rows();
   int p = X.cols();
@@ -65,7 +57,8 @@ Type mNIX_NLL(objective_function<Type>* obj) {
     REPORT(tau_hat);
   }
   // normalizing constant
-  return .5 * (mNIX<Type>::zeta(Omega, nu, tau) - mNIX<Type>::zeta(Omega_hat, nu_hat, tau_hat));
+  return .5 * (mNIX<Type>::zeta(Omega, nu, tau) -
+	       mNIX<Type>::zeta(Omega_hat, nu_hat, tau_hat));
 }
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR this
