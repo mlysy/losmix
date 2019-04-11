@@ -11,7 +11,7 @@
 mnix_post <- function(id, y, X, lambda, Omega, tau, nu) {
   # format inputs
   odata <- get_tmbdata(id = id, y = y, X = X)
-  p <- ncol(odata$X)
+  p <- nrow(odata$Xtr)
   opars <- get_tmbpars(p = p, nData = length(odata$nObs),
                        lambda = lambda, Omega = Omega, tau = tau, nu = nu)
   odata <- c(list(model_name = "mNIX_post"), odata, opars)

@@ -2,7 +2,6 @@
 ///
 /// TODO:
 ///
-/// - Convert `X` to `Xt = X.transpose()` inputs.
 /// - reorder lambda, Omega, tau, nu??
 ///
 /// @note Depends on `TMB.hpp` which is *not* header-guarded, so don't include it here.
@@ -68,11 +67,11 @@ namespace losmix {
     Eigen::LDLT<MatrixXd_t> chol_Ohat_;
   public:
     /// Set prior parameters.
-    void set_prior(const matrix<Type>& lambda,
-		   const matrix<Type>& Omega,
+    void set_prior(cRefMatrix_t& lambda,
+		   cRefMatrix_t& Omega,
 		   const Type& nu, const Type& tau);
     /// Set sufficient statistics.
-    void set_suff(const matrix<Type>& y, const matrix<Type>& X);
+    void set_suff(cRefMatrix_t& y, cRefMatrix_t& Xtr);
     /// Get sufficient statistics.
     void get_suff(Type& yy, RefMatrix_t Xy, RefMatrix_t XX);
     /// Get posterior parameters.
@@ -131,8 +130,8 @@ namespace losmix {
   /// @param[in] nu Prior shape parameter.
   /// @param[in] tau Prior scale parameter.
   template <class Type>
-  inline void mNIX<Type>::set_prior(const matrix<Type>& lambda,
-				    const matrix<Type>& Omega,
+  inline void mNIX<Type>::set_prior(cRefMatrix_t& lambda,
+				    cRefMatrix_t& Omega,
 				    const Type& nu, const Type& tau) {
     lambda_ = lambda;
     Omega_ = Omega;
@@ -145,15 +144,15 @@ namespace losmix {
   }
 
 
-  /// @param[in] y Response vector.
-  /// @param[in] X Design matrix.
+  /// @param[in] y Response vector of length `N`.
+  /// @param[in] Xtr Transpose of design matrix, having size `p x N`.
   template <class Type>
-  inline void mNIX<Type>::set_suff(const matrix<Type>& y,
-				   const matrix<Type>& X) {
-    XX_ = X.transpose() * X; // can't use .noalias()
-    Xy_ = X.transpose() * y;
+  inline void mNIX<Type>::set_suff(cRefMatrix_t& y,
+				   cRefMatrix_t& Xtr) {
+    XX_ = Xtr * Xtr.transpose(); // can't use .noalias()
+    Xy_ = Xtr * y;
     yy_ = utils<Type>::dot_product(y, y);
-    N_ = X.rows();
+    N_ = Xtr.cols();
     return;
   }
 

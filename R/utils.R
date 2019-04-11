@@ -15,7 +15,7 @@ get_tmbdata <- function(id, y, X) {
   y <- do.call(c, lapply(isub, function(ind) y[ind]))
   names(y) <- NULL
   X <- do.call(rbind, lapply(isub, function(ind) X[ind,,drop=FALSE]))
-  list(y = y, X = X, iStart = istart, nObs = Ni)
+  list(y = y, Xtr = t(X), iStart = istart, nObs = Ni)
 }
 
 # format tmb parameters.  throw errors if there are problems.

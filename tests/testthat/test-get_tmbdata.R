@@ -15,9 +15,8 @@ test_that("Extraction is as expected", {
     tmblist <- losmix:::get_tmbdata(id = id, y = y, X = X)
     jj <- sample(length(tmblist$nObs), 1)
     ljj <- names(tmblist$nObs) == lab[jj]
-    expect_equal(y[id == lab[jj]],
-                 tmblist$y[tmblist$iStart[ljj]+1:tmblist$nObs[ljj]])
-    expect_equal(X[id == lab[jj],,drop=FALSE],
-                 tmblist$X[tmblist$iStart[ljj]+1:tmblist$nObs[ljj],,drop=FALSE])
+    ind <- tmblist$iStart[ljj]+1:tmblist$nObs[ljj]
+    expect_equal(y[id == lab[jj]], tmblist$y[ind])
+    expect_equal(X[id == lab[jj],,drop=FALSE], t(tmblist$Xtr[,ind,drop=FALSE]))
   }
 })

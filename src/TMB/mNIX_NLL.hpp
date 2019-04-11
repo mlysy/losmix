@@ -13,7 +13,7 @@ template<class Type>
 Type mNIX_NLL(objective_function<Type>* obj) {
   using namespace losmix;
   // data
-  DATA_MATRIX(X);
+  DATA_MATRIX(Xtr);
   DATA_VECTOR(y);
   // hyperparameters
   PARAMETER_VECTOR(lambda);
@@ -24,15 +24,15 @@ Type mNIX_NLL(objective_function<Type>* obj) {
   Type nu = exp(log_nu);
   Type tau = exp(log_tau);
   // parameters of mNIX posterior
-  int N = X.rows();
-  int p = X.cols();
+  int N = Xtr.cols();
+  int p = Xtr.rows();
   matrix<Type> lambda_hat(p,1);
   matrix<Type> Omega_hat(p,p);
   Type nu_hat;
   Type tau_hat;
   // conversion class
   mNIX<Type> Phi(p);
-  Phi.set_suff(y.matrix(), X);
+  Phi.set_suff(y.matrix(), Xtr);
   Phi.set_prior(lambda.matrix(), Omega, nu, tau);
   Phi.get_post(lambda_hat, Omega_hat, nu_hat, tau_hat);
   SIMULATE {

@@ -9,7 +9,7 @@ template<class Type>
 Type mNIX_post(objective_function<Type>* obj) {
   using namespace losmix;
   // data
-  DATA_MATRIX(X);
+  DATA_MATRIX(Xtr);
   DATA_VECTOR(y);
   DATA_IVECTOR(iStart);
   DATA_IVECTOR(nObs);
@@ -21,7 +21,7 @@ Type mNIX_post(objective_function<Type>* obj) {
   DATA_INTEGER(nPost);
   PARAMETER(theta); // dummy parameter
   SIMULATE {
-    int p = X.cols();
+    int p = Xtr.rows();
     // output dimensions
     matrix<Type> lambda_hat(p,nPost);
     matrix<Type> Omega_hat(p,p*nPost);
@@ -38,7 +38,7 @@ Type mNIX_post(objective_function<Type>* obj) {
     for(int ii=0; ii<nPost; ii++) {
       if(vData || ii == 0) {
 	Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),
-		     X.block(iStart[ii],0,nObs[ii],p));
+		     Xtr.block(0,iStart[ii],p,nObs[ii]));
       }
       if(vPars || ii == 0) {
 	Phi.set_prior(lambda.col(vLambda*ii),Omega.block(0,vOmega*p*ii,p,p),

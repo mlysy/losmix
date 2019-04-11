@@ -9,7 +9,7 @@ template<class Type>
 Type mNIX_marg(objective_function<Type>* obj) {
   using namespace losmix;
   // data
-  DATA_MATRIX(X);
+  DATA_MATRIX(Xtr);
   DATA_VECTOR(y);
   DATA_IVECTOR(iStart);
   DATA_IVECTOR(nObs);
@@ -20,7 +20,7 @@ Type mNIX_marg(objective_function<Type>* obj) {
   PARAMETER(log_tau);
   // internal variables
   int nSub = nObs.size(); // number of subjects
-  int p = X.cols(); // number of covariates
+  int p = Xtr.rows(); // number of covariates
   matrix<Type> Omega = utils<Type>::lchol2var(logC_Omega);
   Type nu = exp(log_nu);
   Type tau = exp(log_tau);
@@ -30,7 +30,7 @@ Type mNIX_marg(objective_function<Type>* obj) {
   Phi.set_prior(lambda, Omega, nu, tau); // conjugate prior hyperparameters
   for(int ii=0; ii<nSub; ii++) {
     Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),
-		 X.block(iStart[ii],0,nObs[ii],p));
+		 Xtr.block(0,iStart[ii],p,nObs[ii]));
     Phi.calc_post(); // conjugate posterior hyperparameters
     nll -= Phi.zeta();
   }
