@@ -56,15 +56,29 @@ namespace losmix {
     ///
     /// @param[in] logC The log-Cholesky factor of `V`.
     /// @return Scalar value of `log pi(logC)`.
-    static Type lchol_prior(cRefMatrix_t logC) {
+    static Type lchol_prior(const vector<Type>& logC) {
       // determine size of matrix
       int p = (-1 + sqrt(1 + 8*logC.size()))/2;
       Type lpi = Type(0.0);
-      for(int ii=0; ii<p-1; ii++) {
-	lpi += (p-ii-1) * logC[p*ii+ii];
+      int jj = 0;
+      for(int ii=1; ii<p; ii++) {
+	lpi += (p-ii) * logC(jj);
+	jj += (ii+1);
       }
       return lpi;
     }
+
+    /// Create `matrix<Type>` of zeros.
+    ///
+    /// @param[in] n Integer number of rows.
+    /// @param[in] p Integer number of columns.
+    /// @return A `matrix<Type>` of size `n x p` initialized with zeros.
+    static matrix<Type> zero_matrix(int n, int p) {
+      matrix<Type> out(n,p);
+      out.setZero();
+      return out;
+    }
+
   };
 
 } // namespace losmix

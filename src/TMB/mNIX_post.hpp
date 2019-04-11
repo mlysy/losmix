@@ -34,7 +34,7 @@ Type mNIX_post(objective_function<Type>* obj) {
     bool vNu = nu.size() > 1;
     bool vTau = tau.size() > 1;
     bool vPars = vLambda || vOmega || vNu || vTau;  
-    mNIX<Type> Phi;
+    mNIX<Type> Phi(p);
     for(int ii=0; ii<nPost; ii++) {
       if(vData || ii == 0) {
 	Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),

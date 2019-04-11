@@ -3,7 +3,7 @@
 export(ilog_chol)
 export(ivec_phi)
 export(log_chol)
-export(mNIX_marg)
+export(mnix_marg)
 export(mnix_post)
 export(mnix_suff)
 export(vec_phi)

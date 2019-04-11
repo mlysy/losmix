@@ -5,6 +5,13 @@ source("utils.R") # clean this up later
 # log-determinant
 ldet <- function(X) as.numeric(determinant(X)$modulus)
 
+# flat prior on the log-Cholesky scale
+lchol_prior <- function(Omega) {
+  omega <- log(diag(chol(Omega)))
+  p <- length(omega)
+  sum((p-(1:p)) * omega)
+}
+
 # convert list of lists into list of numerics.
 # bind specifies binding function.
 unlist_bind <- function(x, name, bind) {
@@ -36,6 +43,17 @@ sim_Phi <- function(p) {
   nu <- runif(1, 10, 20)
   tau <- rexp(1) + 5
   list(lambda = lambda, Omega = Omega, nu = nu, tau = tau)
+}
+
+# simulate ids
+sim_id <- function(N) {
+  M <- length(N)
+  lab <- sample(1000, M)
+  id <- data.frame(id = sample(rep(lab, times = N)),
+                   order = NA)
+  for(jj in 1:M) id$order[id$id==lab[jj]] <- cumsum(c(0,N))[jj]+1:N[jj]
+  id$id <- factor(id$id, levels = lab)
+  id
 }
 
 #--- mniw methods --------------------------------------------------------------

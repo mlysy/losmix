@@ -1,4 +1,10 @@
 /// @file mNIX.hpp
+///
+/// TODO:
+///
+/// - Convert `X` to `Xt = X.transpose()` inputs.
+/// - reorder lambda, Omega, tau, nu??
+///
 /// @note Depends on `TMB.hpp` which is *not* header-guarded, so don't include it here.
 
 #ifndef losmix_mNIX_hpp
@@ -38,20 +44,21 @@ namespace losmix {
     typedef const Eigen::Ref <const MatrixXd_t> cRefMatrix_t;
   private:
     int N_; // number of observations
-    // prior parameters
-    matrix<Type> lambda_;
-    matrix<Type> Omega_;
-    Type nu_;
-    Type tau_;
-    // posterior parameters
-    matrix<Type> lambda_hat_;
-    matrix<Type> Omega_hat_;
-    Type nu_hat_;
-    Type tau_hat_;
+    int p_; // number of covariates
     // sufficient statistics (data)
     matrix<Type> XX_;
     matrix<Type> Xy_;
     Type yy_;
+    // prior hyperparameters
+    matrix<Type> lambda_;
+    matrix<Type> Omega_;
+    Type nu_;
+    Type tau_;
+    // posterior hyperparameters
+    matrix<Type> lambda_hat_;
+    matrix<Type> Omega_hat_;
+    Type nu_hat_;
+    Type tau_hat_;
     // prior precomputations
     matrix<Type> Ol_;
     Type lOl_;
@@ -81,6 +88,8 @@ namespace losmix {
     }
     /// Normalizing constant for mNIX distribution.
     Type zeta();
+    /// Constructor
+    mNIX(int p);
     
     /// Normalizing constant for mNIX distribution.
     ///
@@ -98,6 +107,24 @@ namespace losmix {
 	nu * log(.5 * tau*nu) - atomic::logdet(Omega_);
     }
   };
+
+  /// @param[in] p Integer number of covariates.
+  ///
+  /// @note Explicit memory allocation is required for `calc_post` to function.
+  template <class Type>
+  inline mNIX<Type>::mNIX(int p) {
+    p_ = p;
+    // allocate memory
+    // sufficient statistics
+    Xy_ = utils<Type>::zero_matrix(p_,1);
+    XX_ = utils<Type>::zero_matrix(p_,p_);
+    // prior parameters
+    Omega_ = utils<Type>::zero_matrix(p_,p_);
+    lambda_ = utils<Type>::zero_matrix(p_,1);
+    // posterior parameters
+    lambda_hat_ = utils<Type>::zero_matrix(p_,1);
+    Omega_hat_ = utils<Type>::zero_matrix(p_, p_);
+  }
 
   /// @param[in] lambda Prior mean vector.
   /// @param[in] Omega Prior precision matrix.
@@ -179,10 +206,10 @@ namespace losmix {
   inline Type mNIX<Type>::zeta() {
     // log-determinant of chol(Omega_hat)
     Type ldC = 0.0;
-    for(int ii=0; ii<chol_Ohat_.cols(); ii++) {
-      ldC += log(chol_Ohat_.matrixL()(ii,ii));
+    for(int ii=0; ii<p_; ii++) {
+      ldC += log(chol_Ohat_.vectorD()(ii));
     }
-    return 2.0 * (lgamma(.5 * nu_hat_) - ldC) -
+    return 2.0 * lgamma(.5 * nu_hat_) - ldC -
       nu_hat_ * log(.5 * tau_hat_*nu_hat_);
   } 
 

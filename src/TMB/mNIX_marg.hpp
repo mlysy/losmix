@@ -24,7 +24,7 @@ Type mNIX_marg(objective_function<Type>* obj) {
   matrix<Type> Omega = utils<Type>::lchol2var(logC_Omega);
   Type nu = exp(log_nu);
   Type tau = exp(log_tau);
-  mNIX<Type> Phi;
+  mNIX<Type> Phi(p);
   // negative log-marginal
   Type nll = nSub * mNIX<Type>::zeta(Omega, nu, tau);
   Phi.set_prior(lambda, Omega, nu, tau); // conjugate prior hyperparameters
@@ -36,7 +36,7 @@ Type mNIX_marg(objective_function<Type>* obj) {
   }
   nll *= .5;
   // change-of-variables correction
-  // nll -= lchol_prior(logC_Omega);
+  nll -= utils<Type>::lchol_prior(logC_Omega);
   return nll;
 }
 #undef TMB_OBJECTIVE_PTR

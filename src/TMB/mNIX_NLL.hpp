@@ -2,10 +2,6 @@
 ///
 /// Negative loglikelihood for the LOSMIX model.
 ///
-/// TODO:
-///
-/// - Convert `X` to `Xt = X.transpose()` inputs.
-///
 /// @note Depends on `TMB.hpp` which is *not* header-guarded, so don't include it here.
 
 #include "losmix/utils.hpp"
@@ -35,7 +31,7 @@ Type mNIX_NLL(objective_function<Type>* obj) {
   Type nu_hat;
   Type tau_hat;
   // conversion class
-  mNIX<Type> Phi;
+  mNIX<Type> Phi(p);
   Phi.set_suff(y.matrix(), X);
   Phi.set_prior(lambda.matrix(), Omega, nu, tau);
   Phi.get_post(lambda_hat, Omega_hat, nu_hat, tau_hat);

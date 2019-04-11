@@ -17,7 +17,7 @@ Type mNIX_suff(objective_function<Type>* obj) {
   SIMULATE {
     int p = X.cols();
     int nSub = nObs.size();
-    mNIX<Type> Phi;
+    mNIX<Type> Phi(p);
     vector<Type> yy(nSub);
     matrix<Type> Xy(p, nSub);
     matrix<Type> XX(p, p*nSub);

@@ -4,7 +4,7 @@
 #' @template param-y
 #' @template param-X
 #' @export
-mNIX_marg <- function(id, y, X) {
+mnix_marg <- function(id, y, X) {
   # format inputs
   odata <- c(list(model_name = "mNIX_marg"), get_tmbdata(id = id, y = y, X = X))
   p <- ncol(odata$X)
