@@ -13,6 +13,44 @@ mnix_marg(id, y, X)
 
 \item{X}{Subject covariates.  A matrix of size \code{n x p}.}
 }
+\value{
+A list as returned by \code{TMB::MakeADFun} corresponding to the \emph{negative} log-posterior of the marginal distribution of the mNIX hyperparameters (see \strong{Details}).
+}
 \description{
 Marginal posterior of the mNIX hyperparameters as a \code{TMB::MakeADFun} object.
+}
+\details{
+In particular, the return list contains elements \code{fn}, \code{gr}, and \code{he} corresponding to the negative log-posterior and its first and second derivatives, computed analytically in C++ via automatic differentiation (AD).
+
+To evaluate these functions, the mNIX hyperparameters \code{Phi = (lambda, Omega, nu, tau)} must first be converted to an unconstrained vector, namely
+\preformatted{
+psi = (lambda, log_chol(Omega), log(nu), log(tau)),
+}
+where \code{link{log_chol}} is the log-Cholesky decomposition.
+
+The default prior is
+\preformatted{
+pi(Phi) \propto (nu * tau * |Omega|)^{-1},
+}
+which is equivalent to
+\preformatted{
+pi(psi) \propto prod( diag(chol(Omega))^(p-(1:p)) ).
+}
+}
+\examples{
+# simulate data
+
+p <- 3 # number of covariates
+nsub <- 10 # number of subjects
+p <- 3 # number of covariates
+N <- sample(20:50, nsub, replace = TRUE) # number of
+
+# hyperparameters
+lambda <- rnorm(p)
+Omega <- diag(p)
+nu <- 5 * runif(1) + 3
+tau <- rexp(1)
+
+# parameters
+Theta <- mnix_sim(nsub, lambda = lambda, Omega = Omega, nu = nu, tau = tau)
 }

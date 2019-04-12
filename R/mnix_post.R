@@ -12,8 +12,13 @@ mnix_post <- function(id, y, X, lambda, Omega, tau, nu) {
   # format inputs
   odata <- get_tmbdata(id = id, y = y, X = X)
   p <- nrow(odata$Xtr)
-  opars <- get_tmbpars(p = p, nData = length(odata$nObs),
+  opars <- get_tmbpars(p = p,
                        lambda = lambda, Omega = Omega, tau = tau, nu = nu)
+  n <- c(opars$nOut, length(odata$nObs))
+  if(length(unique(n[n>1])) > 1) {
+    stop("parameter size incompatible with length(unique(id)).")
+  }
+  opars$nOut <- max(n)
   odata <- c(list(model_name = "mNIX_post"), odata, opars)
   obj <- TMB::MakeADFun(data = odata, parameters = list(theta = 0),
                         silent = TRUE, DLL = "losmix_TMBExports")
@@ -24,6 +29,6 @@ mnix_post <- function(id, y, X, lambda, Omega, tau, nu) {
   out <- out[out_names]
   names(out) <- names(out_names)
   out$lambda <- t(out$lambda)
-  out$Omega <- array(out$Omega, dim = c(p,p,opars$nPost))
+  out$Omega <- array(out$Omega, dim = c(p,p,opars$nOut))
   out
 }

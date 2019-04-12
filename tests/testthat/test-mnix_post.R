@@ -1,5 +1,5 @@
-require(losmix)
-require(testthat)
+## require(losmix)
+## require(testthat)
 source("losmix-testfunctions.R")
 
 context("mnix_post")

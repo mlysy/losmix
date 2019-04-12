@@ -64,7 +64,9 @@ namespace losmix {
     // posterior storage
     matrix<Type> Ol_hat_;
     // Cholesky solver
-    Eigen::LDLT<MatrixXd_t> chol_Ohat_;
+    Eigen::LLT<MatrixXd_t> llt_;
+    // simulation
+    matrix<Type> z_;
   public:
     /// Set prior parameters.
     void set_prior(cRefMatrix_t& lambda,
@@ -79,32 +81,26 @@ namespace losmix {
 		  RefMatrix_t Omega_hat,
 		  Type& nu_hat, Type& tau_hat);
     /// Calculate posterior parameters to internal values.
-    ///
-    /// @warning Must be run after a call to `set_suff` and `set_prior`.
-    void calc_post() {
-      get_post(lambda_hat_, Omega_hat_, nu_hat_, tau_hat_);
-      return;
-    }
+    void calc_post();
+    /// Normalizing constant for mNIX distribution.
+    static Type zeta(cRefMatrix_t& Omega,
+		     const Type& nu, const Type& tau);
     /// Normalizing constant for mNIX distribution.
     Type zeta();
-    /// Constructor
-    mNIX(int p);
-    
-    /// Normalizing constant for mNIX distribution.
-    ///
-    /// @param[in] Omega mNIX precision matrix.
-    /// @param[in] nu mNIX shape parameter.
-    /// @param[in] tau mNIX scale parameter.
-    /// @return The mNIX normalizing constant, defined as
-    /// \f[
-    /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|.
-    /// \f]
-    static Type zeta(cRefMatrix_t& Omega,
-		     const Type& nu, const Type& tau) {
-      matrix<Type> Omega_ = Omega;
-      return 2.0 * lgamma(.5 * nu) -
-	nu * log(.5 * tau*nu) - atomic::logdet(Omega_);
-    }
+    /// Random draw from the mNIX distribution.
+    void simulate(RefMatrix_t beta, Type& sigma,
+		  cRefMatrix_t& lambda,
+		  const Eigen::LLT<MatrixXd_t>& llt,
+		  const Type& nu, const Type& tau);
+    /// Random draw from the mNIX distribution.
+    void simulate(RefMatrix_t beta, Type& sigma,
+		  cRefMatrix_t& lambda,
+		  cRefMatrix_t& Omega,
+		  const Type& nu, const Type& tau);
+    /// Random draw from the mNIX distribution.
+    void simulate(RefMatrix_t beta, Type& sigma);
+    /// Constructor.
+    mNIX(int p);    
   };
 
   /// @param[in] p Integer number of covariates.
@@ -123,12 +119,14 @@ namespace losmix {
     // posterior parameters
     lambda_hat_ = utils<Type>::zero_matrix(p_,1);
     Omega_hat_ = utils<Type>::zero_matrix(p_, p_);
+    // simulation
+    z_ = utils<Type>::zero_matrix(p_,1);
   }
 
-  /// @param[in] lambda Prior mean vector.
-  /// @param[in] Omega Prior precision matrix.
-  /// @param[in] nu Prior shape parameter.
-  /// @param[in] tau Prior scale parameter.
+  /// @param[in] lambda Prior mean vector, as a `p x 1` matrix.
+  /// @param[in] Omega Prior precision matrix of size `p x p`.
+  /// @param[in] nu Prior shape parameter (scalar).
+  /// @param[in] tau Prior scale parameter (scalar).
   template <class Type>
   inline void mNIX<Type>::set_prior(cRefMatrix_t& lambda,
 				    cRefMatrix_t& Omega,
@@ -185,13 +183,78 @@ namespace losmix {
 				   RefMatrix_t Omega_hat,
 				   Type& nu_hat, Type& tau_hat) {
     Omega_hat = XX_ + Omega_;
-    chol_Ohat_.compute(Omega_hat);
-    lambda_hat = chol_Ohat_.solve(Ol_ + Xy_);
+    llt_.compute(Omega_hat);
+    lambda_hat = llt_.solve(Ol_ + Xy_);
     nu_hat = nu_ + N_;
     Ol_hat_ = Omega_hat * lambda_hat;
     tau_hat = yy_ - utils<Type>::dot_product(lambda_hat, Ol_hat_) + lOl_ + nu_*tau_;
     tau_hat /= nu_hat;
     return;
+  }
+
+  /// @warning Must be run after a call to `set_suff` and `set_prior`.
+  template <class Type>
+  inline void mNIX<Type>::calc_post() {
+    get_post(lambda_hat_, Omega_hat_, nu_hat_, tau_hat_);
+    return;
+  }
+
+  /// @param[out] beta Regression coefficients, as a `p x 1` matrix.
+  /// @param[out] sigma Standard deviation of errors, as a positive scalar.
+  /// @param[in] lambda Mean vector, as a `p x 1` matrix.
+  /// @param[in] llt Cholesky decomposition of the precision matrix of size `p x p`.  Must be precomputed.
+  /// @param[in] nu Shape parameter (positive scalar).
+  /// @param[in] tau Scale parameter (positive scalar).
+  template <class Type>
+  inline void mNIX<Type>::simulate(RefMatrix_t beta, Type& sigma,
+  				   cRefMatrix_t& lambda,
+  				   const Eigen::LLT<MatrixXd_t>& llt,
+  				   const Type& nu, const Type& tau) {
+    sigma = 1.0/sqrt(rgamma(.5*nu, 2.0/(nu*tau)));
+    z_ = rnorm(p_, Type(0),sigma).matrix();
+    beta = llt.matrixU().solve(z_) + lambda;
+    return;
+  }
+
+  /// @param[out] beta Regression coefficients, as a `p x 1` matrix.
+  /// @param[out] sigma Standard deviation of errors, as a positive scalar.
+  /// @param[in] lambda Mean vector, as a `p x 1` matrix.
+  /// @param[in] Omega Precision matrix of size `p x p`.
+  /// @param[in] nu Shape parameter (positive scalar).
+  /// @param[in] tau Scale parameter (positive scalar).
+  template <class Type>
+  inline void mNIX<Type>::simulate(RefMatrix_t beta, Type& sigma,
+  				   cRefMatrix_t& lambda,
+  				   cRefMatrix_t& Omega,
+  				   const Type& nu, const Type& tau) {
+    llt_.compute(Omega);
+    simulate(beta, sigma, lambda, llt_, nu, tau);
+    return;
+  }
+
+  /// @param[out] beta Regression coefficients, as a `p x 1` matrix.
+  /// @param[out] sigma Standard deviation of errors, as a positive scalar.
+  ///
+  /// @warning Must be run after a call to calc_post.
+  template <class Type>
+  inline void mNIX<Type>::simulate(RefMatrix_t beta, Type& sigma) {
+    simulate(beta, sigma, lambda_hat_, llt_, nu_hat_, tau_hat_);
+    return;
+  }
+
+  /// @param[in] Omega mNIX precision matrix.
+  /// @param[in] nu mNIX shape parameter.
+  /// @param[in] tau mNIX scale parameter.
+  /// @return The mNIX normalizing constant, defined as
+  /// \f[
+  /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|.
+  /// \f]
+  template <class Type>
+  Type mNIX<Type>::zeta(cRefMatrix_t& Omega,
+			const Type& nu, const Type& tau) {
+    matrix<Type> Omega_ = Omega;
+    return 2.0 * lgamma(.5 * nu) -
+      nu * log(.5 * tau*nu) - atomic::logdet(Omega_);
   }
 
   /// @return The mNIX normalizing constant, defined as
@@ -206,9 +269,9 @@ namespace losmix {
     // log-determinant of chol(Omega_hat)
     Type ldC = 0.0;
     for(int ii=0; ii<p_; ii++) {
-      ldC += log(chol_Ohat_.vectorD()(ii));
+      ldC += log(llt_.matrixL()(ii,ii));
     }
-    return 2.0 * lgamma(.5 * nu_hat_) - ldC -
+    return 2.0 * (lgamma(.5 * nu_hat_) - ldC) -
       nu_hat_ * log(.5 * tau_hat_*nu_hat_);
   } 
 

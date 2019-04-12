@@ -18,15 +18,15 @@ Type mNIX_post(objective_function<Type>* obj) {
   DATA_MATRIX(Omega);
   DATA_VECTOR(nu);
   DATA_VECTOR(tau);
-  DATA_INTEGER(nPost);
+  DATA_INTEGER(nOut);
   PARAMETER(theta); // dummy parameter
   SIMULATE {
     int p = Xtr.rows();
     // output dimensions
-    matrix<Type> lambda_hat(p,nPost);
-    matrix<Type> Omega_hat(p,p*nPost);
-    vector<Type> nu_hat(nPost);
-    vector<Type> tau_hat(nPost);
+    matrix<Type> lambda_hat(p,nOut);
+    matrix<Type> Omega_hat(p,p*nOut);
+    vector<Type> nu_hat(nOut);
+    vector<Type> tau_hat(nOut);
     // determine whether each input is single or vectorized
     bool vData = nObs.size() > 1;
     bool vLambda = lambda.cols() > 1;
@@ -35,7 +35,7 @@ Type mNIX_post(objective_function<Type>* obj) {
     bool vTau = tau.size() > 1;
     bool vPars = vLambda || vOmega || vNu || vTau;  
     mNIX<Type> Phi(p);
-    for(int ii=0; ii<nPost; ii++) {
+    for(int ii=0; ii<nOut; ii++) {
       if(vData || ii == 0) {
 	Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),
 		     Xtr.block(0,iStart[ii],p,nObs[ii]));

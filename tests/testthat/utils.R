@@ -69,6 +69,10 @@ dsichisq <- function(x, nu, tau, log = FALSE) {
   ans
 }
 
+rsichisq <- function(n, nu, tau) {
+  1/rgamma(n, shape = nu/2, rate = nu*tau/2)
+}
+
 # density of mnix distribution.
 # x is a vector.
 # v is a scalar.
@@ -79,4 +83,12 @@ dmnix <- function(x, v, Phi, log = FALSE) {
                     log = TRUE)
   if(!log) ans <- exp(ans)
   ans
+}
+
+# random draw from the mnix distribution
+rmnix <- function(lambda, Omega, nu, tau) {
+  sigma <- sqrt(rsichisq(1, nu, tau))
+  z <- rnorm(length(lambda), sd = sigma)
+  beta <- backsolve(chol(Omega), z) + lambda
+  list(beta = c(beta), sigma = sigma)
 }

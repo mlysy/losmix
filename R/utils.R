@@ -19,9 +19,10 @@ get_tmbdata <- function(id, y, X) {
 }
 
 # format tmb parameters.  throw errors if there are problems.
-get_tmbpars <- function(p, nData, lambda, Omega, tau, nu) {
+get_tmbpars <- function(p, nData, nSim, lambda, Omega, tau, nu) {
   if(is_narray(lambda, 1:2)) {
     lambda <- if(is.matrix(lambda)) t(lambda) else matrix(lambda)
+    if(missing(p)) p <- nrow(lambda)
     if(nrow(lambda) != p) stop("dimensions of lambda are incompatible with p.")
   } else {
     stop("lambda must be a numeric vector or matrix.")
@@ -43,11 +44,7 @@ get_tmbpars <- function(p, nData, lambda, Omega, tau, nu) {
   if(length(unique(n[n>1])) > 1) {
     stop("lambda, Omega, nu, and tau have incompatible lengths.")
   }
-  n <- c(max(n), nData)
-  if(length(unique(n[n>1])) > 1) {
-    stop("parameter size incompatible with length(unique(id)).")
-  }
-  list(nPost = max(n), lambda = lambda, Omega = Omega, nu = nu, tau = tau)
+  list(nOut = max(n), lambda = lambda, Omega = Omega, nu = nu, tau = tau)
 }
 
 # check if x is a numeric array with length(dim(x)) %in% dims
