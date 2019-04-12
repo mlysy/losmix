@@ -1,9 +1,9 @@
 #' Convert between hyperparameter list and vector representation.
 #'
 #' @param Phi Hyperparameters as a list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau}.
-#' @param psi Hyperparameters as an unconstrained numeric vector (see \strong{Details}).
+#' @param psi Hyperparameters as an unconstrained numeric vector, or a matrix where each row is one hyperparameter set (see \strong{Details}).
 #' @name vec_phi
-#' @return For \code{vec_phi}, an unconstrained vector.  For \code{ivec_phi}, a list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau}.
+#' @return For \code{vec_phi}, an unconstrained vector or matrix.  For \code{ivec_phi}, a list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau}.
 #' @details The unconstrained hyperparameter representation is given by
 #' \preformatted{
 #' psi <- c(lambda, log_chol(Omega), log(nu), log(tau))
@@ -18,11 +18,14 @@ vec_phi <- function(Phi) {
 #' @rdname vec_phi
 #' @export
 ivec_phi <- function(psi) {
+  if(!is.matrix(psi)) psi <- t(psi)
   # determine size of matrix
-  p <- (-3 + sqrt(9 + 8*(length(psi)-2)))/2
-  lambda <- psi[1:p]
-  logC <- psi[p+1:(p*(p+1)/2)]
-  nu <- exp(psi[p*(p+3)/2+1])
-  tau <- exp(psi[p*(p+3)/2+2])
-  list(lambda = lambda, Omega = ilog_chol(logC), nu = nu, tau = tau)
+  p <- (-3 + sqrt(9 + 8*(ncol(psi)-2)))/2
+  lambda <- psi[,1:p]
+  logC <- psi[,p+1:(p*(p+1)/2),drop=FALSE]
+  Omega <- apply(logC, 1, ilog_chol)
+  Omega <- drop(array(Omega, dim = c(p, p, length(Omega)/p^2)))
+  nu <- exp(psi[,p*(p+3)/2+1])
+  tau <- exp(psi[,p*(p+3)/2+2])
+  list(lambda = lambda, Omega = Omega, nu = nu, tau = tau)
 }

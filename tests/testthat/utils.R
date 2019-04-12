@@ -26,68 +26,21 @@ rinvgamma <- function(n, shape, scale) {
   1/rgamma(n, shape = shape, rate = scale)
 }
 
-# Random draws from a multivariate normal with mean mu and variance V.
-rmvn <- function(n, mu, V) {
-  p <- nrow(V)
-  x <- matrix(rnorm(p*n), n, p) %*% chol(V)
-  t(t(x) + mu)
-}
-
-# Calcuate the density of a multivariate normal with mean mu and variance V.
-dmvn <- function(x, mu, V, log = FALSE) {
-  z <- x-mu
-  IP <- solveV(V, z, ldV = TRUE)
-  ld <- -.5 * (sum(z*IP$y) + IP$ldV + length(mu) * log(2*pi))
-  if(!log) ld <- exp(ld)
-  ld
-}
-
-# Solve method for variance matrices.
-#
-# @param V Variance matrix
-# @param x Optional vector or matrix for which to solve system of equations.  If missing calculates inverse matrix.
-# @param ldV Optionally compute log determinant as well.
-# @return Matrix solving system of equations and optionally the log-determinant.
-# @details This function is faster and more stable than \code{solve} when \code{V} is known to be positive-definite.
-solveV <- function(V, x, ldV = FALSE) {
-  C <- chol(V)
-  if(missing(x)) x <- diag(nrow(V))
-  ans <- backsolve(r = C, x = backsolve(r = C, x = x, transpose = TRUE))
-  if(ldV) {
-    ldV <- 2 * sum(log(diag(C)))
-    ans <- list(y = ans, ldV = ldV)
-  }
-  ans
-}
-
-# density of scaled-inverse chi-square
-# for testing, always use form which is least likely to contain errors
-# in this case, this is change-of-variables y = 1/x with gamma distribution.
-dsichisq <- function(x, nu, tau, log = FALSE) {
-  ans <- dgamma(1/x, shape = nu/2, rate = nu*tau/2, log = TRUE) - 2*log(x)
-  if(!log) ans <- exp(ans)
-  ans
-}
-
-rsichisq <- function(n, nu, tau) {
-  1/rgamma(n, shape = nu/2, rate = nu*tau/2)
-}
-
 # density of mnix distribution.
 # x is a vector.
 # v is a scalar.
 # Phi is a list with elements lambda, Omega, nu, tau.
 dmnix <- function(x, v, Phi, log = FALSE) {
-  ans <- dsichisq(v, nu = Phi$nu, tau = Phi$tau, log = TRUE)
-  ans <- ans + dmvn(x, mu = Phi$lambda, V = v * solve(Phi$Omega),
-                    log = TRUE)
+  ans <- losmix::dsichisq(v, nu = Phi$nu, tau = Phi$tau, log = TRUE)
+  ans <- ans + losmix::dmvn(x, mu = Phi$lambda, Sigma = v * solve(Phi$Omega),
+                            log = TRUE)
   if(!log) ans <- exp(ans)
   ans
 }
 
 # random draw from the mnix distribution
 rmnix <- function(lambda, Omega, nu, tau) {
-  sigma <- sqrt(rsichisq(1, nu, tau))
+  sigma <- sqrt(losmix::rsichisq(1, nu, tau))
   z <- rnorm(length(lambda), sd = sigma)
   beta <- backsolve(chol(Omega), z) + lambda
   list(beta = c(beta), sigma = sigma)

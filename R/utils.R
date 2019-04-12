@@ -1,3 +1,23 @@
+#' Solve method for variance matrices.
+#'
+#' @param V Symmetric positive-definite (i.e., variance) matrix.
+#' @param b Optional vector or matrix for which to solve the system of equations \code{V x = b}.  If missing calculates the inverse of \code{V}.
+#' @param ldV Optionally compute the log determinant as well.
+#' @return The solution of the system of equations, or a list with elements \code{x} and \code{ldV} returning the log-determinant as well.
+#' @details This function is faster and more stable than \code{base::solve} when \code{V} is known to be positive-definite.
+#' @export
+solveV <- function(V, b, ldV = FALSE) {
+  C <- chol(V)
+  if(missing(b)) b <- diag(nrow(V))
+  ans <- backsolve(r = C, x = backsolve(r = C, x = b, transpose = TRUE))
+  if(ldV) {
+    ldV <- 2 * sum(log(diag(C)))
+    ans <- list(x = ans, ldV = ldV)
+  }
+  ans
+}
+
+
 # convert (id, y, X) to TMB input:
 # 1. group y and X by consecutive ids
 # 2. convert id to istart: starting point, and Ni: number of observations per subject.

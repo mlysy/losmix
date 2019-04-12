@@ -12,10 +12,10 @@ ivec_phi(psi)
 \arguments{
 \item{Phi}{Hyperparameters as a list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau}.}
 
-\item{psi}{Hyperparameters as an unconstrained numeric vector (see \strong{Details}).}
+\item{psi}{Hyperparameters as an unconstrained numeric vector, or a matrix where each row is one hyperparameter set (see \strong{Details}).}
 }
 \value{
-For \code{vec_phi}, an unconstrained vector.  For \code{ivec_phi}, a list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau}.
+For \code{vec_phi}, an unconstrained vector or matrix.  For \code{ivec_phi}, a list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau}.
 }
 \description{
 Convert between hyperparameter list and vector representation.
