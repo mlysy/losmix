@@ -10,21 +10,21 @@ Type mNIX_suff(objective_function<Type>* obj) {
   using namespace losmix;
   // data
   DATA_MATRIX(Xtr);
-  DATA_VECTOR(y);
+  DATA_MATRIX(y);
   DATA_IVECTOR(iStart);
   DATA_IVECTOR(nObs);
   PARAMETER(theta); // dummy parameter
   SIMULATE {
     int p = Xtr.rows();
     int nSub = nObs.size();
-    mNIX<Type> Phi(p);
+    mNIX<Type> mnix(p);
     vector<Type> yy(nSub);
     matrix<Type> Xy(p, nSub);
     matrix<Type> XX(p, p*nSub);
     for(int ii=0; ii<nSub; ii++) {
-      Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),
-		   Xtr.block(0,iStart[ii],p,nObs[ii]));
-      Phi.get_suff(yy(ii), Xy.col(ii), XX.block(0,p*ii,p,p));
+      mnix.set_suff(y.block(iStart[ii],0,nObs[ii],1),
+		    Xtr.block(0,iStart[ii],p,nObs[ii]));
+      mnix.get_suff(yy(ii), Xy.col(ii), XX.block(0,p*ii,p,p));
     }
     REPORT(yy);
     REPORT(Xy);

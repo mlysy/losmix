@@ -10,7 +10,7 @@ Type mNIX_marg(objective_function<Type>* obj) {
   using namespace losmix;
   // data
   DATA_MATRIX(Xtr);
-  DATA_VECTOR(y);
+  DATA_MATRIX(y);
   DATA_IVECTOR(iStart);
   DATA_IVECTOR(nObs);
   // parameters
@@ -21,20 +21,20 @@ Type mNIX_marg(objective_function<Type>* obj) {
   // internal variables
   int nSub = nObs.size(); // number of subjects
   int p = Xtr.rows(); // number of covariates
-  matrix<Type> Omega = utils<Type>::lchol2var(logC_Omega);
+  matrix<Type> Omega(p,p);
+  utils<Type>::lchol2var(Omega, logC_Omega.matrix());
   Type nu = exp(log_nu);
   Type tau = exp(log_tau);
-  mNIX<Type> Phi(p);
+  mNIX<Type> mnix(p);
   // negative log-marginal
-  Type nll = nSub * mNIX<Type>::zeta(Omega, nu, tau);
-  Phi.set_prior(lambda, Omega, nu, tau); // conjugate prior hyperparameters
+  Type nll = nSub * mnix.zeta(Omega, nu, tau);
+  mnix.set_prior(lambda, Omega, nu, tau); // conjugate prior hyperparameters
   for(int ii=0; ii<nSub; ii++) {
-    Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),
-		 Xtr.block(0,iStart[ii],p,nObs[ii]));
-    Phi.calc_post(); // conjugate posterior hyperparameters
-    nll -= Phi.zeta();
+    mnix.set_suff(y.block(iStart[ii],0,nObs[ii],1),
+		  Xtr.block(0,iStart[ii],p,nObs[ii]));
+    mnix.calc_post(); // conjugate posterior hyperparameters
+    nll -= mnix.zeta();
   }
-  nll *= .5;
   // change-of-variables correction
   nll -= utils<Type>::lchol_prior(logC_Omega);
   return nll;

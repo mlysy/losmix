@@ -18,13 +18,24 @@ solveV <- function(V, b, ldV = FALSE) {
 }
 
 
-# convert (id, y, X) to TMB input:
-# 1. group y and X by consecutive ids
-# 2. convert id to istart: starting point, and Ni: number of observations per subject.
-get_tmbdata <- function(id, y, X) {
+#' Format data for \pkg{TMB} calculations.
+#'
+#' @template param-y
+#' @template param-X
+#' @template param-id
+#' @return A list with the following elements:
+#' \describe{
+#'   \item{\code{y}}{The response vector \code{y}, reordered such that all observations for a given subject are consecutive, and converted to an \code{n x 1} column matrix.}
+#'   \item{\code{Xtr}}{The transpose of the covariate matrix, reordered the same way as \code{y}, having size \code{p x n}.}
+#'   \item{\code{iStart}}{An integer vector of length \code{nsub}, specifying the starting index of the observations for each subject, using C++ indexing (i.e., starting at zero).}
+#'   \item{\code{nObs}}{An integer vector of length \code{nsub}, specifying the number of observations per subject.}
+#' }
+#' @export
+format_data <- function(y, X, id) {
+  ntot <- length(y) # total number of observations
+  if(missing(id)) id <- rep(1, ntot)
   if(!is.matrix(X)) X <- as.matrix(X)
-  ntot <- length(id) # total number of observations
-  if(length(y) != ntot || nrow(X) != ntot) {
+  if(length(id) != ntot || nrow(X) != ntot) {
     stop("id, y, and X have incompatible dimensions.")
   }
   isub <- tapply(1:ntot, id, c, simplify = FALSE) # indices per subject
@@ -35,11 +46,11 @@ get_tmbdata <- function(id, y, X) {
   y <- do.call(c, lapply(isub, function(ind) y[ind]))
   names(y) <- NULL
   X <- do.call(rbind, lapply(isub, function(ind) X[ind,,drop=FALSE]))
-  list(y = y, Xtr = t(X), iStart = istart, nObs = Ni)
+  list(y = as.matrix(y), Xtr = t(X), iStart = istart, nObs = Ni)
 }
 
 # format tmb parameters.  throw errors if there are problems.
-get_tmbpars <- function(p, nData, nSim, lambda, Omega, tau, nu) {
+format_pars <- function(p, nData, nSim, lambda, Omega, tau, nu) {
   if(is_narray(lambda, 1:2)) {
     lambda <- if(is.matrix(lambda)) t(lambda) else matrix(lambda)
     if(missing(p)) p <- nrow(lambda)

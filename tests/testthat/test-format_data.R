@@ -1,6 +1,6 @@
 source("losmix-testfunctions.R")
 
-context("get_tmbdata")
+context("format_data")
 
 test_that("Extraction is as expected", {
   ntests <- 100
@@ -12,7 +12,7 @@ test_that("Extraction is as expected", {
     y <- sim_y(N = sum(N))
     lab <- sample(1000,M)
     id <- sample(rep(lab, times = N))
-    tmblist <- losmix:::get_tmbdata(id = id, y = y, X = X)
+    tmblist <- format_data(id = id, y = y, X = X)
     jj <- sample(length(tmblist$nObs), 1)
     ljj <- names(tmblist$nObs) == lab[jj]
     ind <- tmblist$iStart[ljj]+1:tmblist$nObs[ljj]

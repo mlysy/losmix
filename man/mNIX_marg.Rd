@@ -7,11 +7,11 @@
 mnix_marg(id, y, X)
 }
 \arguments{
-\item{id}{Subject identifiers.  A vector of length \code{n} consisting of \code{nsub <= n} distinct elements.}
+\item{id}{Subject identifiers.  A vector of length \code{n} consisting of \code{nsub <= n} distinct elements.  If missing default to \code{rep(1, n)}, i.e., only one subject.}
 
-\item{y}{Subject responses.  A vector of length \code{n}.}
+\item{y}{Response vector for all subjects.  A vector of length \code{n}.}
 
-\item{X}{Subject covariates.  A matrix of size \code{n x p}.}
+\item{X}{Covariate matrix from all subjects.  A matrix of size \code{n x p}.}
 }
 \value{
 A list as returned by \code{TMB::MakeADFun} corresponding to the \emph{negative} log-posterior of the marginal distribution of the mNIX hyperparameters (see \strong{Details}).

@@ -4,7 +4,7 @@
 \alias{mnix_sim}
 \title{Genenerate random draws from the mNIX distribution.}
 \usage{
-mnix_sim(n, lambda, Omega, tau, nu, y, X)
+mnix_sim(n, lambda, Omega, nu, tau, y, X)
 }
 \arguments{
 \item{n}{Number of random draws (integer).}
@@ -13,9 +13,9 @@ mnix_sim(n, lambda, Omega, tau, nu, y, X)
 
 \item{Omega}{Precision matrix parameter.  A matrix of size \code{p x p}, or an array of size \code{p x p x n}.}
 
-\item{tau}{Scale parameter.  A scalar or a vector of length \code{n}.}
-
 \item{nu}{Degrees-of-freedom parameter.  A scalar or a vector of length \code{n}.}
+
+\item{tau}{Scale parameter.  A scalar or a vector of length \code{n}.}
 
 \item{y}{Optional response vector of length \code{N} for one subject.}
 

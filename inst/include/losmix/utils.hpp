@@ -32,23 +32,40 @@ namespace losmix {
     ///
     /// For a `p x p` variance matrix `V`, the log-Cholesky decomposition is defined as its upper-Cholesky factor `V = U.transpose() * U`, but with logs of the diagonal elements, and concatenated in column-major order into a vector of length `p*(p+1)/2`.
     ///
-    /// @param[in] logC The log-Cholesky factor of `V`.
-    /// @return If `logC` is a vector of length `n`, the `p x p` variance matrix `V`, where `n = 1/2 * (-1 + sqrt(1 + 8n))`.
-    static matrix<Type> lchol2var(vector<Type>& logC) {
+    /// @param[out] V A `p x p` variance matrix.
+    /// @param[in] logC The log-Cholesky factor of `V`, as a matrix of size `n x 1`, where `n = p*(p+1)/2`.
+    /// @return If `logC` is a vector of length `n`, the `p x p` variance matrix `V`, where `p = 1/2 * (-1 + sqrt(1 + 8n))`.
+    static void lchol2var(RefMatrix_t V, cRefMatrix_t& logC) {
       // determine size of matrix
-      int p = (-1 + sqrt(1 + 8*logC.size()))/2;
-      matrix<Type> C(p,p);
-      C.setZero();
+      int p = (-1 + sqrt(1 + 8*logC.rows()))/2;
+      // matrix<Type> C(p,p);
+      V.setZero();
       int kk=0;
       // convert cholesky decomposition from vector to matrix
       for(int ii=0; ii<p; ii++) {
 	for(int jj=0; jj<=ii; jj++) {
-	  C(jj,ii) = logC[kk++];
-	  if(ii==jj) C(ii,ii) = exp(C(ii,ii));
+	  V(jj,ii) = logC(kk++,0);
+	  if(ii==jj) V(ii,ii) = exp(V(ii,ii));
 	}
       }
-      return C.transpose() * C;
+      V = V.transpose() * V;
+      return;
     }
+    // static matrix<Type> lchol2var(vector<Type>& logC) {
+    //   // determine size of matrix
+    //   int p = (-1 + sqrt(1 + 8*logC.size()))/2;
+    //   matrix<Type> C(p,p);
+    //   C.setZero();
+    //   int kk=0;
+    //   // convert cholesky decomposition from vector to matrix
+    //   for(int ii=0; ii<p; ii++) {
+    // 	for(int jj=0; jj<=ii; jj++) {
+    // 	  C(jj,ii) = logC(kk++);
+    // 	  if(ii==jj) C(ii,ii) = exp(C(ii,ii));
+    // 	}
+    //   }
+    //   return C.transpose() * C;
+    // }
 
     /// Compute the variance flat prior on the log-Cholesky scale.
     ///
@@ -79,6 +96,17 @@ namespace losmix {
       return out;
     }
 
+    /// Create `matrix<Type>` identity matrix.
+    ///
+    /// @param[in] n Integer number of rows.
+    /// @param[in] p Integer number of columns.
+    /// @return A `matrix<Type>` of size `n x p` initialized with zeros.
+    static matrix<Type> identity_matrix(int n, int p) {
+      matrix<Type> out(n,p);
+      out.setIdentity();
+      return out;
+    }
+    
   };
 
 } // namespace losmix

@@ -1,1 +1,1 @@
-#' @param X Subject covariates.  A matrix of size \code{n x p}.
+#' @param X Covariate matrix from all subjects.  A matrix of size \code{n x p}.

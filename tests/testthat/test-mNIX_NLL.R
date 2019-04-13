@@ -1,5 +1,5 @@
-require(losmix)
-require(testthat)
+## require(losmix)
+## require(testthat)
 ## require(numDeriv)
 source("losmix-testfunctions.R")
 
@@ -13,7 +13,7 @@ test_that("Sufficient statistics are the same in R and TMB", {
     p <- sample(3:5, 1)
     X <- sim_X(N, p)
     y <- sim_y(N)
-    odata <- list(Xtr = t(X), y = y)
+    odata <- list(Xtr = t(X), y = as.matrix(y))
     opars <- Phi2par(Phi = sim_Phi(p))
     obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
                           parameters = opars,
@@ -34,7 +34,7 @@ test_that("Conjugate posterior hyperparameters are the same in R and TMB", {
     X <- sim_X(N, p)
     y <- sim_y(N)
     Phi <- sim_Phi(p)
-    odata <- list(Xtr = t(X), y = y)
+    odata <- list(Xtr = t(X), y = as.matrix(y))
     opars <- Phi2par(sim_Phi(p))
     obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
                           parameters = opars,
@@ -65,7 +65,7 @@ test_that("R(loglik + lprior) = TMB(lmarg + lcond)", {
     y <- sim_y(N)
     theta <- sim_theta(p)
     Phi <- sim_Phi(p)
-    odata <- list(Xtr = t(X), y = y)
+    odata <- list(Xtr = t(X), y = as.matrix(y))
     opars <- Phi2par(sim_Phi(p))
     obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
                           parameters = opars,

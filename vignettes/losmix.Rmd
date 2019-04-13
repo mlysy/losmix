@@ -6,6 +6,10 @@ output:
   html_vignette:
     number_sections: false
     toc: true
+  html_document:
+    number_sections: false
+    toc: true
+    toc_float: true
 bibliography: references.bib
 csl: taylor-and-francis-harvard-x.csl
 link-citations: true
@@ -60,6 +64,7 @@ MathJax.Hub.Config({
 \newcommand{\var}{\operatorname{var}}
 \newcommand{\logchol}{\operatorname{log-Chol}}
 \newcommand{\VV}{{\bm V}}
+\newcommand{\eet}{{\bm \eta}}
 
 ```{r setup, include = FALSE}
 source("format.R")
@@ -105,11 +110,11 @@ where
 \end{equation}
 Moreover, the marginal likelihood of the hyperparameters $\pph = (\lla, \OOm, \nu, \tau)$ is available in closed form:
 \begin{equation*}
-\ell(\pph \mid \YY, \XX) = M \Psi(\pph) - \sum_{i=1}^M \Psi(\hat \pph_i),
+\ell(\pph \mid \YY, \XX) = - M \zeta(\pph) + \sum_{i=1}^M \zeta(\hat \pph_i),
 \end{equation*}
 where
 \begin{equation*}
-\Psi(\pph) = \tfrac 1 2 \big[\log |\OOm| + \nu \log(\nu\tau/2) - 2\log \Gamma(\nu/2)\big],
+\zeta(\pph) = \tfrac 1 2 \big[2\log \Gamma(\nu/2) - \log |\OOm| - \nu \log(\nu\tau/2)\big],
 \end{equation*}
 and $\hat \pph_i = (\hat \lla_i, \hat \OOm_i, \hat \nu_i, \hat \tau_i)$ is given by \\eqref{eq:phihat}.
 
@@ -217,7 +222,7 @@ sim_obj <- TMB::MakeADFun(data = c(list(method = "simcond"), sim_data),
 Theta <- sim_obj$simulate()
 ```
 
-## `r subsection("Tests")`
+### `r subsection("Tests")`
 
 Might also want to define some utility functions on the R side, if only for testing the **TMB** code more easily.  
 
@@ -228,6 +233,14 @@ Might also want to define some utility functions on the R side, if only for test
 
 ## `r section("Model Extensions")`
 
-
+Model \\eqref{eq:hlr} can easily be extended by letting $\XX = \XX(\eet)$ and $\pph = \pph(\eet)$ each depend on hyperparameters $\eet$.  For example, consider the model
+\begin{equation}
+\begin{aligned}
+y_{it} & \ind \N(\beta_{i1} + \beta_{i2} \exp(-\gamma t), \s_i^2) \\
+(\bbe_i, \s_i^2) & \ind \mNIX(\lla, \OOm, \nu x_i, \tau),
+\label{eq:hlrex}
+\end{aligned}
+\end{equation}
+such that covariates of the model are $x_{it} = (t, x_i)$ and the hyperparameters are $\eet = (\gamma, \lla, \OOm, \nu, \tau)$.
 
 ## `r section("References")`

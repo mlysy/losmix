@@ -2,7 +2,8 @@
 ///
 /// TODO:
 ///
-/// - reorder lambda, Omega, tau, nu??
+/// - reorder lambda, Omega, tau, nu?? (Probably not.)
+/// - more efficient computation of normalizing constant. 
 ///
 /// @note Depends on `TMB.hpp` which is *not* header-guarded, so don't include it here.
 
@@ -63,8 +64,9 @@ namespace losmix {
     Type lOl_;
     // posterior storage
     matrix<Type> Ol_hat_;
-    // Cholesky solver
-    Eigen::LLT<MatrixXd_t> llt_;
+    // Cholesky solvers
+    Eigen::LLT<MatrixXd_t> llt_; // for Omega_hat
+    Eigen::LLT<MatrixXd_t> lltx_; // for external Omega
     // simulation
     matrix<Type> z_;
   public:
@@ -83,10 +85,15 @@ namespace losmix {
     /// Calculate posterior parameters to internal values.
     void calc_post();
     /// Normalizing constant for mNIX distribution.
-    static Type zeta(cRefMatrix_t& Omega,
-		     const Type& nu, const Type& tau);
+    Type zeta(const Eigen::LLT<MatrixXd_t>& llt,
+	      const Type& nu, const Type& tau);
+    /// Normalizing constant for mNIX distribution.
+    Type zeta(cRefMatrix_t& Omega,
+	      const Type& nu, const Type& tau);
     /// Normalizing constant for mNIX distribution.
     Type zeta();
+    /// Marginal likelihood for mNIX distribution.
+    Type log_marg();
     /// Random draw from the mNIX distribution.
     void simulate(RefMatrix_t beta, Type& sigma,
 		  cRefMatrix_t& lambda,
@@ -119,6 +126,11 @@ namespace losmix {
     // posterior parameters
     lambda_hat_ = utils<Type>::zero_matrix(p_,1);
     Omega_hat_ = utils<Type>::zero_matrix(p_, p_);
+    Ol_ = utils<Type>::zero_matrix(p_,1);
+    Ol_hat_ = utils<Type>::zero_matrix(p_,1);
+    // cholesky solvers
+    llt_.compute(utils<Type>::identity_matrix(p_,p_));
+    lltx_.compute(utils<Type>::identity_matrix(p_,p_));
     // simulation
     z_ = utils<Type>::zero_matrix(p_,1);
   }
@@ -227,8 +239,8 @@ namespace losmix {
   				   cRefMatrix_t& lambda,
   				   cRefMatrix_t& Omega,
   				   const Type& nu, const Type& tau) {
-    llt_.compute(Omega);
-    simulate(beta, sigma, lambda, llt_, nu, tau);
+    lltx_.compute(Omega);
+    simulate(beta, sigma, lambda, lltx_, nu, tau);
     return;
   }
 
@@ -242,9 +254,28 @@ namespace losmix {
     return;
   }
 
-  /// @param[in] Omega mNIX precision matrix.
-  /// @param[in] nu mNIX shape parameter.
-  /// @param[in] tau mNIX scale parameter.
+  /// @param[in] llt Cholesky decomposition of the precision matrix Omega of size `p x p`.  Must be precomputed.
+  /// @param[in] nu Shape parameter (positive scalar).
+  /// @param[in] tau Scale parameter (positive scalar).
+  /// @return The mNIX normalizing constant, defined as
+  /// \f[
+  /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|.
+  /// \f]
+  template <class Type>
+  Type mNIX<Type>::zeta(const Eigen::LLT<MatrixXd_t>& llt,
+			const Type& nu, const Type& tau) {
+    // log-determinant of chol(Omega)
+    Type ldC = 0.0;
+    for(int ii=0; ii<p_; ii++) {
+      ldC += log(llt.matrixL()(ii,ii));
+    }
+    Type nu2 = .5 * nu;
+    return lgamma(nu2) - ldC - nu2 * log(tau * nu2);
+  }
+  
+  /// @param[in] Omega Precision matrix of size `p x p`.
+  /// @param[in] nu Shape parameter (positive scalar).
+  /// @param[in] tau Scale parameter (positive scalar).
   /// @return The mNIX normalizing constant, defined as
   /// \f[
   /// 2 \log \Gamma(\nu/2) - nu \log(\tau\nu/2) - \log |\Omega|.
@@ -252,9 +283,11 @@ namespace losmix {
   template <class Type>
   Type mNIX<Type>::zeta(cRefMatrix_t& Omega,
 			const Type& nu, const Type& tau) {
-    matrix<Type> Omega_ = Omega;
-    return 2.0 * lgamma(.5 * nu) -
-      nu * log(.5 * tau*nu) - atomic::logdet(Omega_);
+    lltx_.compute(Omega);
+    return zeta(lltx_, nu, tau);
+    // matrix<Type> Omega_ = Omega;
+    // return 2.0 * lgamma(.5 * nu) -
+    //   nu * log(.5 * tau*nu) - atomic::logdet(Omega_);
   }
 
   /// @return The mNIX normalizing constant, defined as
@@ -266,14 +299,25 @@ namespace losmix {
   /// @warning Must be run after a call to `calc_post`.
   template <class Type>
   inline Type mNIX<Type>::zeta() {
-    // log-determinant of chol(Omega_hat)
-    Type ldC = 0.0;
-    for(int ii=0; ii<p_; ii++) {
-      ldC += log(llt_.matrixL()(ii,ii));
-    }
-    return 2.0 * (lgamma(.5 * nu_hat_) - ldC) -
-      nu_hat_ * log(.5 * tau_hat_*nu_hat_);
-  } 
+    return zeta(llt_, nu_hat_, tau_hat_);
+    // // log-determinant of chol(Omega_hat)
+    // Type ldC = 0.0;
+    // for(int ii=0; ii<p_; ii++) {
+    //   ldC += log(llt_.matrixL()(ii,ii));
+    // }
+    // return 2.0 * (lgamma(.5 * nu_hat_) - ldC) -
+    //   nu_hat_ * log(.5 * tau_hat_*nu_hat_);
+  }
+
+  /// @return The mNIX marginal (log) likelihood, defined as
+  /// \f[
+  /// \tfrac 1 2 \big[\zeta(\hat \phi) - \zeta(\phi)\big],
+  /// \f]
+  /// where `phi = (lambda, Omega, nu, tau)` and `phi_hat = (lambda_hat, Omega_hat, nu_hat, tau_hat)` are the prior and posterior mNIX hyperparameters, and `zeta()` is the mNIX normalizing constant.
+  template <class Type>
+  inline Type mNIX<Type>::log_marg() {
+    return zeta() - zeta(Omega_, nu_, tau_);
+  }
 
 } // namespace losmix
 

@@ -1,18 +1,19 @@
-#' Calculate the hyperparameters of the mNIX conjugate posterior distribution.
+#' Calculate the parameters of the mNIX conjugate posterior distribution.
 #'
 #' @template param-id
 #' @template param-y
 #' @template param-X
 #' @param lambda Prior mean parameter.  A vector of length \code{p}, or a matrix of size \code{n x p}.
 #' @param Omega Prior precision matrix.  A matrix of size \code{p x p}, or an array of size \code{p x p x n}.
-#' @param tau Prior scale parameter.  A scalar or a vector of length \code{n}.
 #' @param nu Prior degrees-of-freedom.  A scalar or a vector of length \code{n}.
+#' @param tau Prior scale parameter.  A scalar or a vector of length \code{n}.
+#' @return A list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau} of posterior parameters, consisting of a matrix of size \code{n x p}, and array of size \code{p x p x n}, and two vectors of length \code{n}, respectively.
 #' @export
-mnix_post <- function(id, y, X, lambda, Omega, tau, nu) {
+mnix_post <- function(id, y, X, lambda, Omega, nu, tau) {
   # format inputs
-  odata <- get_tmbdata(id = id, y = y, X = X)
+  odata <- format_data(id = id, y = y, X = X)
   p <- nrow(odata$Xtr)
-  opars <- get_tmbpars(p = p,
+  opars <- format_pars(p = p,
                        lambda = lambda, Omega = Omega, tau = tau, nu = nu)
   n <- c(opars$nOut, length(odata$nObs))
   if(length(unique(n[n>1])) > 1) {

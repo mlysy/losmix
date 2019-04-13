@@ -5,13 +5,6 @@ source("utils.R") # clean this up later
 # log-determinant
 ldet <- function(X) as.numeric(determinant(X)$modulus)
 
-# flat prior on the log-Cholesky scale
-lchol_prior <- function(Omega) {
-  omega <- log(diag(chol(Omega)))
-  p <- length(omega)
-  sum((p-(1:p)) * omega)
-}
-
 # convert list of lists into list of numerics.
 # bind specifies binding function.
 unlist_bind <- function(x, name, bind) {
@@ -76,11 +69,6 @@ get_post <- function(suff, Phi) {
   that <- yy - crossprod(lhat, Ohat %*% lhat) + lOl
   that <- (that[1] + nu*tau)/nuhat
   list(lambda = lhat, Omega = Ohat, nu = nuhat, tau = that)
-}
-
-# normalizing constant
-zeta <- function(Phi) {
-  2 * lgamma(Phi$nu/2) - Phi$nu * log(Phi$tau*Phi$nu/2) - ldet(Phi$Omega)
 }
 
 #--- conversions between regular and computational basis -----------------------

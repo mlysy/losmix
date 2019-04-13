@@ -1,3 +1,5 @@
+require(losmix)
+require(testthat)
 source("losmix-testfunctions.R")
 
 context("mnix_marg")

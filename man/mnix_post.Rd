@@ -2,25 +2,28 @@
 % Please edit documentation in R/mnix_post.R
 \name{mnix_post}
 \alias{mnix_post}
-\title{Calculate the hyperparameters of the mNIX conjugate posterior distribution.}
+\title{Calculate the parameters of the mNIX conjugate posterior distribution.}
 \usage{
-mnix_post(id, y, X, lambda, Omega, tau, nu)
+mnix_post(id, y, X, lambda, Omega, nu, tau)
 }
 \arguments{
-\item{id}{Subject identifiers.  A vector of length \code{n} consisting of \code{nsub <= n} distinct elements.}
+\item{id}{Subject identifiers.  A vector of length \code{n} consisting of \code{nsub <= n} distinct elements.  If missing default to \code{rep(1, n)}, i.e., only one subject.}
 
-\item{y}{Subject responses.  A vector of length \code{n}.}
+\item{y}{Response vector for all subjects.  A vector of length \code{n}.}
 
-\item{X}{Subject covariates.  A matrix of size \code{n x p}.}
+\item{X}{Covariate matrix from all subjects.  A matrix of size \code{n x p}.}
 
 \item{lambda}{Prior mean parameter.  A vector of length \code{p}, or a matrix of size \code{n x p}.}
 
 \item{Omega}{Prior precision matrix.  A matrix of size \code{p x p}, or an array of size \code{p x p x n}.}
 
-\item{tau}{Prior scale parameter.  A scalar or a vector of length \code{n}.}
-
 \item{nu}{Prior degrees-of-freedom.  A scalar or a vector of length \code{n}.}
+
+\item{tau}{Prior scale parameter.  A scalar or a vector of length \code{n}.}
+}
+\value{
+A list with elements \code{lambda}, \code{Omega}, \code{nu}, and \code{tau} of posterior parameters, consisting of a matrix of size \code{n x p}, and array of size \code{p x p x n}, and two vectors of length \code{n}, respectively.
 }
 \description{
-Calculate the hyperparameters of the mNIX conjugate posterior distribution.
+Calculate the parameters of the mNIX conjugate posterior distribution.
 }

@@ -25,7 +25,7 @@
 #' @export
 mnix_marg <- function(id, y, X) {
   # format inputs
-  odata <- c(list(model_name = "mNIX_marg"), get_tmbdata(id = id, y = y, X = X))
+  odata <- c(list(model_name = "mNIX_marg"), format_data(id = id, y = y, X = X))
   p <- nrow(odata$Xtr)
   opars <- list(lambda = rep(0, p), logC_Omega = log_chol(diag(p)),
                 log_tau = 0, log_nu = 0)

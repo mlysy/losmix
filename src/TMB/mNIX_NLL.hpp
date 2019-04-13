@@ -14,33 +14,34 @@ Type mNIX_NLL(objective_function<Type>* obj) {
   using namespace losmix;
   // data
   DATA_MATRIX(Xtr);
-  DATA_VECTOR(y);
+  DATA_MATRIX(y);
   // hyperparameters
   PARAMETER_VECTOR(lambda);
   PARAMETER_VECTOR(logC_Omega); // Omega on the log-cholesky scale
   PARAMETER(log_nu);
   PARAMETER(log_tau);
-  matrix<Type> Omega = utils<Type>::lchol2var(logC_Omega);
-  Type nu = exp(log_nu);
-  Type tau = exp(log_tau);
   // parameters of mNIX posterior
   int N = Xtr.cols();
   int p = Xtr.rows();
+  matrix<Type> Omega(p,p);
+  utils<Type>::lchol2var(Omega, logC_Omega.matrix());
+  Type nu = exp(log_nu);
+  Type tau = exp(log_tau);
   matrix<Type> lambda_hat(p,1);
   matrix<Type> Omega_hat(p,p);
   Type nu_hat;
   Type tau_hat;
   // conversion class
-  mNIX<Type> Phi(p);
-  Phi.set_suff(y.matrix(), Xtr);
-  Phi.set_prior(lambda.matrix(), Omega, nu, tau);
-  Phi.get_post(lambda_hat, Omega_hat, nu_hat, tau_hat);
+  mNIX<Type> mnix(p);
+  mnix.set_suff(y, Xtr);
+  mnix.set_prior(lambda.matrix(), Omega, nu, tau);
+  mnix.get_post(lambda_hat, Omega_hat, nu_hat, tau_hat);
   SIMULATE {
     // sufficient statistic outputs
     Type yy;
     matrix<Type> Xy(p,1);
     matrix<Type> XX(p,p);
-    Phi.get_suff(yy, Xy, XX);
+    mnix.get_suff(yy, Xy, XX);
     REPORT(yy);
     REPORT(Xy);
     REPORT(XX);
@@ -53,8 +54,10 @@ Type mNIX_NLL(objective_function<Type>* obj) {
     REPORT(tau_hat);
   }
   // normalizing constant
-  return .5 * (mNIX<Type>::zeta(Omega, nu, tau) -
-	       mNIX<Type>::zeta(Omega_hat, nu_hat, tau_hat));
+  mnix.calc_post();
+  return - mnix.log_marg();
+  // return .5 * (mnix.zeta(Omega, nu, tau) -
+  // 	       mnix.zeta(Omega_hat, nu_hat, tau_hat));
 }
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR this

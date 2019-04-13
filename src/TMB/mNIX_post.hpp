@@ -10,7 +10,7 @@ Type mNIX_post(objective_function<Type>* obj) {
   using namespace losmix;
   // data
   DATA_MATRIX(Xtr);
-  DATA_VECTOR(y);
+  DATA_MATRIX(y);
   DATA_IVECTOR(iStart);
   DATA_IVECTOR(nObs);
   // parameters (input as data because can't resize anyways)
@@ -34,17 +34,17 @@ Type mNIX_post(objective_function<Type>* obj) {
     bool vNu = nu.size() > 1;
     bool vTau = tau.size() > 1;
     bool vPars = vLambda || vOmega || vNu || vTau;  
-    mNIX<Type> Phi(p);
+    mNIX<Type> mnix(p);
     for(int ii=0; ii<nOut; ii++) {
       if(vData || ii == 0) {
-	Phi.set_suff(y.segment(iStart[ii],nObs[ii]).matrix(),
-		     Xtr.block(0,iStart[ii],p,nObs[ii]));
+	mnix.set_suff(y.block(iStart[ii],0,nObs[ii],1),
+		      Xtr.block(0,iStart[ii],p,nObs[ii]));
       }
       if(vPars || ii == 0) {
-	Phi.set_prior(lambda.col(vLambda*ii),Omega.block(0,vOmega*p*ii,p,p),
-		      nu(vNu*ii), tau(vTau*ii));
+	mnix.set_prior(lambda.col(vLambda*ii),Omega.block(0,vOmega*p*ii,p,p),
+		       nu(vNu*ii), tau(vTau*ii));
       }
-      Phi.get_post(lambda_hat.col(ii), Omega_hat.block(0,p*ii,p,p),
+      mnix.get_post(lambda_hat.col(ii), Omega_hat.block(0,p*ii,p,p),
 		   nu_hat(ii), tau_hat(ii));
     }
     REPORT(lambda_hat);
