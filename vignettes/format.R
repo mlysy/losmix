@@ -111,6 +111,7 @@ ref_label <- function(label) {
   labels <- .internal_labels$labels
   if(label %in% colnames(labels)) {
     ref <- labels["ref",label]
+    ref <- gsub("([[:digit:]]+[.[:digit:]]*)", "$\\1$", ref)
     anchor <- labels["anchor",label]
   } else {
     ref <- "???"

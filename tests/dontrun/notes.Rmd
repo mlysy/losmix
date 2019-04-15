@@ -1,0 +1,58 @@
+---
+title: "Design Notes"
+output: rmarkdown:html_vignette
+---
+
+```{r setup, include = FALSE}
+source("format.R")
+```
+
+## `r section("Typical Usage")`
+
+Here are some functions we might need:
+
+- Let's assume that `dat` is a data frame with columns `id`, `y`, `x1`, `x2`, ..., `xp`.
+- `losmix_marg`: Posterior sampling from $p(\pph \mid \YY, \XX)$.
+- `losmix_cond`: Posterior sampling from $p(\tth_i \mid \YY_i, \XX_i, \pph)$.
+
+Then for mixed effect models, we'll need the following C++ things to be called from user's **TMB** code:
+
+- `mnix`: A class for the mNIX distribution.  Will contain methods to get/set sufficient statistics, hyperparameters of the conjugate prior/posterior.
+- `nix`: Same thing, but specialized for covariate-free case.
+- `mnix_zeta` and `nix_zeta`: Normalizing constants for `mnix` and `nix`.  
+
+How about from the R side?
+
+```{r, eval = FALSE}
+# 1.  TMB object for marginal distribution
+lp_obj <- TMB::MakeADFun(data = c(list(method = "lpmarg"), lp_data),
+                         parameters = lp_pars,
+                         DLL = "MyModel", silent = TRUE)
+
+# 2.  Sample from marginal distribution
+
+# 2a. Fit normal approximation
+psi_mean <- optim(par = lp_obj$par, fn = lp_obj$fn, gr = lp_obj$gr,
+                  method = "BFGS")
+psi_var <- losmix_mvar(obj, psi_mean, type = "numDeriv")
+
+# 2b. Sample from it
+nsamples <- 1e4
+Psi <- rmvn(nsamples, psi_mean, psi_var)
+
+# 3.  Sample from posterior random-effects distribution for a
+#     particular observation.
+sim_obj <- TMB::MakeADFun(data = c(list(method = "simcond"), sim_data),
+                          parameters = list(Psi = Psi),
+                          DLL = "MyModel", silent = TRUE)
+Theta <- sim_obj$simulate()
+```
+
+### `r subsection("Tests")`
+
+Might also want to define some utility functions on the R side, if only for testing the **TMB** code more easily.  
+
+- `*_suff`: Extract sufficient statistics from data, where `* = {mnix, nix}`.  This is really for testing purposes, so may not want to increase size of package due to compiled C++ code...
+- `*_post`: Posterior parameters from data + prior.
+- `*_marg`: Marginal hyperparameter distribution with default prior.
+- `*_sim`: Random draws.

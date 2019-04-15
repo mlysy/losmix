@@ -1,12 +1,16 @@
 ---
-title: "losmix: Inference for Location-Scale Mixed-Effects Models"
+title: "**losmix**: Inference for Location-Scale Mixed-Effects Models"
 author: "Martin Lysy"
 date: "`r Sys.Date()`"
 output: 
-  html_vignette:
+  rmarkdown::html_vignette:
     number_sections: false
     toc: true
   html_document:
+    number_sections: false
+    toc: true
+    toc_float: true
+  bookdown::html_document2:
     number_sections: false
     toc: true
     toc_float: true
@@ -61,12 +65,18 @@ MathJax.Hub.Config({
 \newcommand{\bpool}{\hat \beta^{\tx{pool}}}
 \newcommand{\ud}{\tx{d}}
 \newcommand{\argmax}{\operatorname{arg\,max}}
+\newcommand{\argmin}{\operatorname{arg\,min}}
 \newcommand{\var}{\operatorname{var}}
 \newcommand{\logchol}{\operatorname{log-Chol}}
 \newcommand{\VV}{{\bm V}}
+\newcommand{\gg}{{\bm g}}
+\newcommand{\HH}{{\bm H}}
 \newcommand{\eet}{{\bm \eta}}
 
 ```{r setup, include = FALSE}
+suppressMessages({
+  require(losmix)
+})
 source("format.R")
 ```
 
@@ -130,7 +140,7 @@ A case of particular interest is when $\xx_{it} \equiv 1$.  In this case we typi
 \end{equation}
 where $\bar y_i = \frac 1 {N_i} \sum_{t=1}^{N_i} y_{it}$ and $S_i = \sum_{t=1}^{N_i}(y_{it} - \bar y_i)^2$.
 
-## `r section("Bayesian Inference")`
+## `r section("Bayesian Inference", "sec:bayes_inf")`
 
 Given a hyperparameter prior $\pi(\pph)$, let $q(\pph \mid \YY, \XX) = \ell(\pph \mid \YY, \XX) + \log \pi(\pph)$, and calculate
 \begin{equation}
@@ -141,7 +151,7 @@ Then for $M$ sufficiently large, the hyperparameter posterior distribution may b
 \begin{equation*}
 \pph \mid \YY, \XX \sim \N(\hat \pph, \hat \VV).
 \end{equation*}
-In order to estimate the random-effect $\tth_i = (\bbe_, \s_i^2)$ for a given observation $i$, simulate iid draws $\tth_i^{(1)}, \ldots, \tth_i^{(B)}$ via
+In order to estimate the random effect $\tth_i = (\bbe_i, \s_i^2)$ for a given observation $i$, simulate iid draws $\tth_i^{(1)}, \ldots, \tth_i^{(B)}$ via
 \begin{equation}
 \begin{aligned}
 \pph^{(b)} & \iid \N(\hat \pph, \hat \VV) \\
@@ -161,6 +171,7 @@ Thus, the crux of the computational challenge lies in the optimization problem \
 In order to specify the hyperparameter prior $\pi(\pph)$, we first switch to an unconstrained parametrization, namely
 \begin{equation}
 \pps = (\lla, \oom, \log \nu, \log \tau),
+\label{eq:utrans}
 \end{equation}
 where $\oom$ is a vector of length $p(p+1)/2$ corresponding to the upper Cholesky factor of $\OOm_{p \times p}$ but with the log of its diagonal elements.  In other words, if
 $$
@@ -176,60 +187,174 @@ then $\UU$ is the unique upper-triangular matrix with positive diagonal elements
 A straightforward choice of default prior is the standard uninformative prior $\pi(\pps) \propto 1$.  However, this prior is not invariant to permutation of the elements of $\OOm$ corresponding to relabeling the elements of $\bbe$.  In other words, if $\xx_{it} = (\tx{gender}_i, \tx{age}_i)$ for subject $i$, then inference with the prior $\pi(\pps) \propto 1$ will be different if instead we had $\xx_{it} = (\tx{age}_i, \tx{gender}_i)$.  In order to avoid this, consider instead the prior
 \begin{equation}
 \pi(\pps) \propto \prod_{j=1}^p U_{jj}^{p-j},
+\label{eq:scaleprior}
 \end{equation}
-where the $U_{jj}$ are easily obtained from $\oom$.  Then not only is Bayesian inference invariant to relabeling of $\xx_{it}$, but in fact also to any transformation $\tilde \xx_{it} = \bm{A} \xx_{it}$ for invertible $\bm A_{p \times p}$.
+where the $U_{jj}$ are easily obtained from $\oom$.  Then not only is Bayesian inference invariant to relabeling of $\xx_{it}$, but in fact also to any transformation $\tilde \xx_{it} = \bm{A} \xx_{it}$ for invertible $\bm A_{p \times p}$.  
+
+With this choice of prior and unconstrained parametrization, the **TMB** optimization problem becomes finding
+\begin{equation}
+\hat \pps = \argmin_{\pps} r(\pps \mid \YY, \XX), \qquad \hat \VV = -\left[\frac{\partial^2}{\partial \pps^2} r(\hat \pps \mid \YY, \XX)\right]^{-1},
+\label{eq:tmbopt}
+\end{equation}
+where $r(\pps \mid \YY, \XX) = -\ell(\pps \mid \YY, \XX) - \log \pi(\pps)$ is the *negative* marginal log-posterior (the desired input for **TMB**).
 
 ## `r section("Example")`
 
-## `r section("Typical Usage")`
+The following example provides a quick overview of the main **losmix** R functions:
 
-Here are some functions we might need:
+- `mnix_sim()`: Generate random draws from an mNIX distribution.
+- `mnix_marg()`: Create a `TMB::MakeADFun()` model object for the marginal hyperparameter posterior distribution (more on this momentarily).
 
-- Let's assume that `dat` is a data frame with columns `id`, `y`, `x1`, `x2`, ..., `xp`.
-- `losmix_marg`: Posterior sampling from $p(\pph \mid \YY, \XX)$.
-- `losmix_cond`: Posterior sampling from $p(\tth_i \mid \YY_i, \XX_i, \pph)$.
+### `r subsection("Simulate Data")`
 
-Then for mixed effect models, we'll need the following C++ things to be called from user's **TMB** code:
+Let's start by generating an arbitary dataset.  Note the use of `mnix_sim()` to generate $(\bbe_i, \s_i^2)$ from the mNIX distribution.
 
-- `mnix`: A class for the mNIX distribution.  Will contain methods to get/set sufficient statistics, hyperparameters of the conjugate prior/posterior.
-- `nix`: Same thing, but specialized for covariate-free case.
-- `mnix_zeta` and `nix_zeta`: Normalizing constants for `mnix` and `nix`.  
+```{r ex1_sim}
+require(losmix)
 
-How about from the R side?
+set.seed(1234) # reproducible results
 
-```{r, eval = FALSE}
-# 1.  TMB object for marginal distribution
-lp_obj <- TMB::MakeADFun(data = c(list(method = "lpmarg"), lp_data),
-                         parameters = lp_pars,
-                         DLL = "MyModel", silent = TRUE)
+p <- 3 # number of covariates
+nSub <- 50 # number of subjects
+N <- sample(20:50, nSub, replace = TRUE) # number of observations per subject
 
-# 2.  Sample from marginal distribution
+# hyperparameters
+lambda <- rnorm(p)
+Omega <- diag(p)
+nu <- 5 * runif(1) + 3
+tau <- rexp(1)
 
-# 2a. Fit normal approximation
-psi_mean <- optim(par = lp_obj$par, fn = lp_obj$fn, gr = lp_obj$gr,
-                  method = "BFGS")
-psi_var <- losmix_mvar(obj, psi_mean, type = "numDeriv")
+# parameters: generate them from an mNIX distribution
+Theta <- mnix_sim(nSub, lambda = lambda, Omega = Omega, nu = nu, tau = tau)
 
-# 2b. Sample from it
-nsamples <- 1e4
-Psi <- rmvn(nsamples, psi_mean, psi_var)
-
-# 3.  Sample from posterior random-effects distribution for a
-#     particular observation.
-sim_obj <- TMB::MakeADFun(data = c(list(method = "simcond"), sim_data),
-                          parameters = list(Psi = Psi),
-                          DLL = "MyModel", silent = TRUE)
-Theta <- sim_obj$simulate()
+# data: generate vector/matrix for each subject,
+# then merge into single vector/matrix
+# covariate matrices
+X <- lapply(N, function(n) matrix(rnorm(n*p), n, p))
+# response vectors
+y <- lapply(1:nSub, function(ii) {
+  rnorm(N[ii], mean = c(X[[ii]] %*% Theta$beta[ii,]), sd = Theta$sigma[ii])
+})
+# convert lists to single matrix/vector
+X <- do.call(rbind, X)
+y <- do.call(c, y)
+# subject identifiers
+id <- rep(1:nSub, times = N)
 ```
 
-### `r subsection("Tests")`
+### `r subsection("Marginal Posterior Inference")`
 
-Might also want to define some utility functions on the R side, if only for testing the **TMB** code more easily.  
+Now that we have simulated data, we can estimate the approximate marginal posterior distribution $p(\pph \mid \YY, \XX)$.  To do this, we first use `TMB::MakeADFun()` to create a model object.  This object contains, among other things, the *negative* log marginal posterior $r(\pps \mid \YY, \XX) = -\log p(\pps \mid \YY, \XX)$ on the unconstrained scale \\eqref{eq:utrans} with the scale-invariant prior \\eqref{eq:scaleprior}, along with its gradient, $\gg(\pps) = \frac{\partial}{\partial \pps} r(\pps \mid \YY, \XX)$. 
 
-- `*_suff`: Extract sufficient statistics from data, where `* = {mnix, nix}`.  This is really for testing purposes, so may not want to increase size of package due to compiled C++ code...
-- `*_post`: Posterior parameters from data + prior.
-- `*_marg`: Marginal hyperparameter distribution with default prior.
-- `*_sim`: Random draws.
+```{r ex1_nlp}
+# marginal posterior distribution
+nlp <- mnix_marg(id = id, y = y, X = X)
+names(nlp)
+```
+
+To conduct the Bayesian inference scheme described in Section `r ref_label("sec:bayes_inf")`, we proceed with the following steps:
+
+1.  Calculate $\hat \pps$ and $\hat \VV$ as defined in \\eqref{eq:tmbopt}.
+2.  Simulate draws from the approximate posterior distribution
+
+    $$
+    \hat p(\pps \mid \YY, \XX) \qquad \iff \qquad \pps \mid \YY, \XX \sim \N(\hat \pps, \hat \VV).
+	$$
+	
+3.  If we are interested in parameters on the original scale, then must apply the inverse transformation of \\eqref{eq:utrans} to every sample obtained in Step 2.
+
+In order to accomplish Step 1, R provides a couple of build-in functions for numerical optimization:
+
+- `stats::optim()`: The default algorithm `method = "Nelder-Mead"` is derivative-free, but `method = "BFGS"` is a gradient-based quasi-Newton algorithm.
+- `stats::nlm()`: This provides the option of including both gradient and hessian information.  **TMB** can in fact use AD to compute the hessian $\HH(\pps) = \frac{\partial^2}{\partial \pps^2} r(\pps \mid \YY, \XX)$.  
+- `stats::nlminb()`: Another optimizer with optional gradient and hessian information.
+
+Each of the algorithms above offers a different trade-off between speed, stability, and accuracy.  As this trade-off is typically problem-dependent, **losmix** currently does not provide a default routine, but using any of the functions above is relatively straightforward.  For high-dimensional optimization with large $p$, the user is invited to explore the `cran_link("nloptr")` suite of optimizers if the options above are insufficient.
+
+The R code below using `stats::nlm()` to perform the optimization.  Note the peculiar way in which function and gradient information are input simultaneously, instead of a separate arguments.  This is to increase computational efficiency when function and gradient share certain calculations.  This is the case for **TMB** functions, as calling `nlp$gr()` without arguments reuses calculations from the last call to `nlp$fn()`.
+
+```{r ex1_fit, warning = FALSE}
+# objective function
+ofun <- function(par) {
+  out <- nlp$fn(par)
+  # include gradient information via 'attribute'
+  attr(out, "gradient") <- nlp$gr()
+  out
+}
+
+# optimization
+opt <- nlm(p = nlp$par, # starting value (losmix picks a reasonable default)
+           f = ofun) # objective function
+opt$code # code == 1 means that 'nlm' thinks it converged
+```
+
+To check whether optimization was successful, the first thing is to check the built-in convergence diagnostic of `stat::nlm()`, in this case, `opt$code == 1` as above.  Another check is the size of the gradient at the potential solution, on the absolute and relative scale:
+
+```{r ex1_grad_check}
+disp <- rbind(est = opt$estimate, # potential solution
+              grad = opt$gradient, # gradient at the potential solution
+              rel = opt$gradient/abs(opt$estimate)) # relative size
+signif(disp, 2)
+```
+
+In this case the maximum gradient magnitude relative to the potential solution is `r max(abs(disp["rel",]))`, so we are reasonably confident to have arrived at a local minimum of $r(\pps \mid \YY, \XX)$.  Thus we may use **TMB** to calculate $\hat \VV = \HH(\hat \pps \mid \YY, \XX)^{-1}$ in order to complete Step 1.  Note the use of `solveV()` to efficiently and stably compute the inverse of the symmetric positive-definite matrix $\HH(\hat \pps \mid \YY, \XX)$.
+
+```{r ex1_hess}
+psi_mean <- opt$estimate # (approximate) posterior mean of p(psi | Y, X)
+psi_var <- solveV(nlp$he(opt$estimate)) # (approximate) posterior variance
+```
+
+Figure `r ref_label("fig:ex1_mpost")` displays the approximate posterior distribution $\hat p(\phi_j \mid \YY, \XX)$ for each of hyperparameter on its original scale, after completing Steps 2 and 3.
+
+```{r ex1_mpost}
+# Step 2: sample from p_hat(psi | Y, X)
+
+npost <- 1e4 # number of posterior draws
+Psi_post <- rmvn(n = npost, mu = psi_mean, Sigma = psi_var)
+
+# Step 3: convert to sample from p_hat(phi | Y, X)
+Phi_post <- ivec_phi(Psi_post)
+
+# histograms of posterior distributions
+# true hyperparameter values are vertical lines in red
+
+# format data for plotting
+iOmega <- cbind(rbind(1:p, 1:p), combn(1:p,2)) # unique elements of Omega
+Phi_plot <- cbind(Phi_post$lambda, # lambda
+                  apply(iOmega, 2,
+                        function(ii) Phi_post$Omega[ii[1],ii[2],]), # Omega
+                  Phi_post$nu, # nu
+                  Phi_post$tau) # tau
+# hyperparameter names
+phi_names <- c(paste0("lambda[", 1:p, "]"),
+               paste0("Omega[", iOmega[1,], iOmega[2,], "]"),
+               "nu", "tau")
+# true values
+phi_true <- c(lambda, Omega[t(iOmega)], nu, tau)
+
+# create plot
+par(mfrow = c(3,4), mar = c(2,2,4,.5))
+for(ii in 1:ncol(Phi_plot)) {
+  # approximate posterio
+  hist(Phi_plot[,ii], breaks = 40, xlab = "", ylab = "",
+       main = parse(text = paste0("hat(p)(", phi_names[ii],
+                                  "*\" | \"*bold(Y),bold(X))")))
+  # true parameter value
+  abline(v = phi_true[ii], col = "red", lwd = 2)
+}
+# legend
+plot(0, type = "n", xlim = c(0,1), ylim = c(0,1),
+     xlab = "", ylab = "", axes = FALSE)
+legend("bottom", inset = .05,
+       legend = c("Posterior Distribution", "True Hyperparameter Value"),
+       lwd = c(NA, 2), pch = c(22, NA), seg.len = 1.5,
+       col = c("black", "red"), bg = c("white", NA), cex = .85)
+```
+`r fig_label("Approximate posterior distribution for each parameter on the original scale.", "fig:ex1_mpost")`
+
+### `r subsection("Inference for Random Effects")`
+
+
 
 ## `r section("Model Extensions")`
 
