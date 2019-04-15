@@ -71,36 +71,3 @@ Phi2par <- function(Phi) {
   list(lambda = Phi$lambda, logC_Omega = losmix::log_chol(Phi$Omega),
        log_nu = log(Phi$nu), log_tau = log(Phi$tau))
 }
-
-
-{
-    pkg <- as.package(pkg)
-    vigns <- tools::pkgVignettes(dir = pkg$path)
-    if (length(vigns$docs) == 0)
-        return()
-    install_deps(pkg$path, dependencies, upgrade = upgrade)
-    message("Building ", pkg$package, " vignettes")
-    if (isTRUE(install)) {
-        build <- function(pkg_path, clean, quiet, upgrade) {
-            withr::with_temp_libpaths(action = "prefix", {
-                devtools::install(pkg_path, upgrade = upgrade,
-                  reload = FALSE, quiet = quiet)
-                tools::buildVignettes(dir = pkg_path, clean = clean,
-                  tangle = TRUE, quiet = quiet)
-            })
-        }
-    }
-    else {
-        build <- function(pkg_path, clean, quiet, upgrade) {
-            tools::buildVignettes(dir = pkg_path, clean = clean,
-                tangle = TRUE, quiet = quiet)
-        }
-    }
-    callr::r(build, args = list(pkg_path = pkg$path, clean = clean,
-        upgrade = upgrade, quiet = quiet), show = TRUE, spinner = FALSE)
-    vigns <- tools::pkgVignettes(dir = pkg$path, source = TRUE,
-        output = TRUE)
-    copy_vignettes(pkg, keep_md)
-    create_vignette_index(pkg, vigns)
-    invisible(TRUE)
-}

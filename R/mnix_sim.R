@@ -10,6 +10,7 @@
 #' @param id Optional subject identifier vector of length \code{N} with \code{nsub <= N} distinct elements (see \strong{Details}).
 #' @return A list with elements \code{beta} and \code{sigma} of size \code{n x p} and length \code{n}, respectively.
 #' @details If \code{y}, \code{X} and \code{id} are unspecified, then \code{(beta, sigma)} are drawn from \code{mNIX(lambda, Omega, nu, tau)}.  Otherwise, they are drawn from the posterior mNIX distribution \code{p(beta, sigma | y, X, id, lambda, Omega, nu, tau)}.  In this case, the number of subjects \code{nsub} must be \code{n} or \code{1}.
+#' @example examples/mnix_sim.R
 #' @export
 mnix_sim <- function(n, lambda, Omega, nu, tau, y, X, id) {
   # format inputs
