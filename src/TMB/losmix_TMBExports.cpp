@@ -2,16 +2,20 @@
 
 #define TMB_LIB_INIT R_init_losmix_TMBExports
 #include <TMB.hpp>
+#include "ilog_chol.hpp"
 #include "mNIX_marg.hpp"
 #include "mNIX_NLL.hpp"
 #include "mNIX_post.hpp"
 #include "mNIX_sim.hpp"
 #include "mNIX_suff.hpp"
+#include "ModelExt.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() () {
   DATA_STRING(model_name);
-  if(model_name == "mNIX_marg") {
+  if(model_name == "ilog_chol") {
+    return ilog_chol(this);
+  } else if(model_name == "mNIX_marg") {
     return mNIX_marg(this);
   } else if(model_name == "mNIX_NLL") {
     return mNIX_NLL(this);
@@ -21,6 +25,8 @@ Type objective_function<Type>::operator() () {
     return mNIX_sim(this);
   } else if(model_name == "mNIX_suff") {
     return mNIX_suff(this);
+  } else if(model_name == "ModelExt") {
+    return ModelExt(this);
   } else {
     error("Unknown model_name.");
   }

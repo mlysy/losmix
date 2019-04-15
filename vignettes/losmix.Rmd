@@ -10,10 +10,6 @@ output:
     number_sections: false
     toc: true
     toc_float: true
-  bookdown::html_document2:
-    number_sections: false
-    toc: true
-    toc_float: true
 bibliography: references.bib
 csl: taylor-and-francis-harvard-x.csl
 link-citations: true
@@ -76,8 +72,10 @@ MathJax.Hub.Config({
 ```{r setup, include = FALSE}
 suppressMessages({
   require(losmix)
+  require(TMB)
 })
 source("format.R")
+knitr::opts_chunk$set(comment = NA)
 ```
 
 ## `r section("Modeling Framework")`
@@ -151,11 +149,12 @@ Then for $M$ sufficiently large, the hyperparameter posterior distribution may b
 \begin{equation*}
 \pph \mid \YY, \XX \sim \N(\hat \pph, \hat \VV).
 \end{equation*}
+
 In order to estimate the random effect $\tth_i = (\bbe_i, \s_i^2)$ for a given observation $i$, simulate iid draws $\tth_i^{(1)}, \ldots, \tth_i^{(B)}$ via
 \begin{equation}
 \begin{aligned}
 \pph^{(b)} & \iid \N(\hat \pph, \hat \VV) \\
-\hat \tth_i^{(b)} \mid \pph^{(b)} & \ind \mNIX(\hat \lla_i^{(b)}, \hat \OOm_i^{(b)}, \hat \nu_i^{(b)}, \hat \tau_i^{(b)}),
+\tth_i^{(b)} \mid \pph^{(b)} & \ind \mNIX(\hat \lla_i^{(b)}, \hat \OOm_i^{(b)}, \hat \nu_i^{(b)}, \hat \tau_i^{(b)}),
 \end{aligned}
 \label{eq:repost}
 \end{equation}
@@ -242,7 +241,7 @@ y <- do.call(c, y)
 id <- rep(1:nSub, times = N)
 ```
 
-### `r subsection("Marginal Posterior Inference")`
+### `r subsection("Marginal Posterior Inference", "sec:mpost")`
 
 Now that we have simulated data, we can estimate the approximate marginal posterior distribution $p(\pph \mid \YY, \XX)$.  To do this, we first use `TMB::MakeADFun()` to create a model object.  This object contains, among other things, the *negative* log marginal posterior $r(\pps \mid \YY, \XX) = -\log p(\pps \mid \YY, \XX)$ on the unconstrained scale \\eqref{eq:utrans} with the scale-invariant prior \\eqref{eq:scaleprior}, along with its gradient, $\gg(\pps) = \frac{\partial}{\partial \pps} r(\pps \mid \YY, \XX)$. 
 
@@ -306,7 +305,7 @@ psi_var <- solveV(nlp$he(opt$estimate)) # (approximate) posterior variance
 
 Figure `r ref_label("fig:ex1_mpost")` displays the approximate posterior distribution $\hat p(\phi_j \mid \YY, \XX)$ for each of hyperparameter on its original scale, after completing Steps 2 and 3.
 
-```{r ex1_mpost}
+```{r ex1_mpost, fig.width = 7, fig.height = 5}
 # Step 2: sample from p_hat(psi | Y, X)
 
 npost <- 1e4 # number of posterior draws
@@ -335,7 +334,7 @@ phi_true <- c(lambda, Omega[t(iOmega)], nu, tau)
 # create plot
 par(mfrow = c(3,4), mar = c(2,2,4,.5))
 for(ii in 1:ncol(Phi_plot)) {
-  # approximate posterio
+  # approximate posterior
   hist(Phi_plot[,ii], breaks = 40, xlab = "", ylab = "",
        main = parse(text = paste0("hat(p)(", phi_names[ii],
                                   "*\" | \"*bold(Y),bold(X))")))
@@ -350,9 +349,50 @@ legend("bottom", inset = .05,
        lwd = c(NA, 2), pch = c(22, NA), seg.len = 1.5,
        col = c("black", "red"), bg = c("white", NA), cex = .85)
 ```
-`r fig_label("Approximate posterior distribution for each parameter on the original scale.", "fig:ex1_mpost")`
+`r fig_label("Approximate posterior distribution for each hyperparameter on the original scale.", "fig:ex1_mpost")`
 
-### `r subsection("Inference for Random Effects")`
+### `r subsection("Inference for Random Effects", "sec:rx1")`
+
+The following R code shows how to estimate the random effects $\tth_i = (\bbe_i, \s_i^2)$ for an individual $i$ using the approximate posterior distribution \\eqref{eq:repost}.  The approximate posterior $\hat p(\tth_i \mid \YY, \XX)$ and the true parameter value are shown in Figure `r ref_label("fig:ex1_rxpost")`.
+
+```{r ex1_rxpost, fig.width = 7, fig.height = 5}
+# inference for random effects
+
+iSub <- sample(nSub, 1) # pick a subject at random
+
+# data for subject i
+Xi <- X[id == iSub,]
+yi <- y[id == iSub]
+
+# sample from p(thetai | y, X)
+Thetai_post <- mnix_sim(npost,
+                        lambda = Phi_post$lambda, Omega = Phi_post$Omega,
+                        nu = Phi_post$nu, tau = Phi_post$tau,
+                        y = yi, X = Xi)
+
+# plot (approximate) posterior distributions
+# true parameter values are plotted in red
+
+# format data for plotting
+Thetai_plot <- cbind(Thetai_post$beta, # beta
+                     Thetai_post$sigma) # sigma
+# parameter names
+thetai_names <- c(paste0("beta[i", 1:p, "]"), "sigma[i]")
+# true parameter values for subject i
+thetai_true <- c(Theta$beta[iSub,], sigma = Theta$sigma[iSub])
+
+# create plot
+par(mfrow = c(2,2), mar = c(2,2,4,.5))
+for(ii in 1:ncol(Thetai_plot)) {
+  # approximate posterior
+  hist(Thetai_plot[,ii], breaks = 40, xlab = "", ylab = "",
+       main = parse(text = paste0("hat(p)(", thetai_names[ii],
+                                  "*\" | \"*bold(Y),bold(X))")))
+  # true parameter value
+  abline(v = thetai_true[ii], col = "red", lwd = 2)
+}
+```
+`r fig_label("Approximate posterior distribution for the random effects of a given subject $i$.", "fig:ex1_rxpost")`
 
 
 
@@ -362,10 +402,238 @@ Model \\eqref{eq:hlr} can easily be extended by letting $\XX = \XX(\eet)$ and $\
 \begin{equation}
 \begin{aligned}
 y_{it} & \ind \N(\beta_{i1} + \beta_{i2} \exp(-\gamma t), \s_i^2) \\
-(\bbe_i, \s_i^2) & \ind \mNIX(\lla, \OOm, \nu x_i, \tau),
-\label{eq:hlrex}
+(\bbe_i, \s_i^2) & \ind \mNIX(\lla, \OOm, \nu \cdot x_i, \tau),
 \end{aligned}
+\label{eq:hlrex}
 \end{equation}
-such that covariates of the model are $x_{it} = (t, x_i)$ and the hyperparameters are $\eet = (\gamma, \lla, \OOm, \nu, \tau)$.
+such that covariates of the model are $x_{it} = (t, x_i)$ and the hyperparameters are $\eet = (\gamma, \lla, \OOm, \nu, \tau)$.  
+
+Model \\eqref{eq:hlrex} is implemented in C++ using **TMB** interface to R, along with the **losmix** C++ library in the code block below.  The code can also be found in the file `ModelExt.cpp` located in the directory returned by the following call:
+
+```{r ex2_dir, echo = 2, results = "hide"}
+mxt_file <- system.file("include", "losmix", "ModelExt.cpp", package = "losmix")
+system.file("include", "losmix", "ModelExt.cpp", package = "losmix")
+```
+
+A couple of useful resources for following the C++ code:
+
+- **TMB** is extensively documented [here](https://github.com/kaskr/adcomp/wiki/Documentation).
+- **TMB** uses the [**Eigen**](http://eigen.tuxfamily.org/index.php?title=Main_Page) C++ library for linear algebra (i.e., matrix operations), which is extensively documented [here](http://eigen.tuxfamily.org/dox/).
+
+```{r, echo = FALSE, results = "asis"}
+cat("```cpp", readLines(mxt_file), "```", sep = "\n")
+```
+
+### `r subsection("Compiling and Testing")`
+
+`ModelExt.cpp` is compiled in an R session as follows:
+
+```{r ex2_compile, eval = FALSE}
+require(TMB)
+
+model_name <- "ModelExt"
+# instruct TMB where to find losmix library
+include_path <- system.file("include", package = "losmix")
+# compile and load model
+TMB::compile(paste0(model_name, ".cpp"),
+             PKG_CXXFLAGS = paste0('-I"', include_path, '"'))
+dyn.load(TMB::dynlib(model_name))
+```
+
+The following R code shows how to conduct approximate Bayesian inference for model \\eqref{eq:hlrex} by testing that the C++ implementation is correct.  So first let's simulate some data from model \\eqref{eq:hlrex}:
+
+```{r ex2_data, fig.width = 7, fig.height = 4}
+nSub <- 10 # number of subjects
+N <- sample(20:50, nSub, replace = TRUE) # observations per subject
+
+# hyperparameters
+gamma <- runif(1) * .2
+lambda <- rnorm(2)
+Omega <- crossprod(matrix(rnorm(4), 2, 2))/10
+nu <- runif(1, 1, 2)*50
+tau <- rexp(1)/100
+
+# covariates
+X <- lapply(N, function(N) {
+  cbind(t = 1:N, x = runif(1, 1, 5))
+})
+
+# parameters
+Theta <- mnix_sim(nSub, lambda = lambda, Omega =  Omega,
+                  nu = nu * sapply(X, function(x) x[1,2]), tau = tau)
+
+# responses
+# mean vectors
+Mu <- lapply(1:nSub, function(ii) {
+  Theta$beta[ii,1] + Theta$beta[ii,2] * exp(-gamma * X[[ii]][,1])
+})
+# observation vectors
+y <- lapply(1:nSub, function(ii) {
+  rnorm(N[ii], mean = Mu[[ii]], sd = Theta$sigma[ii])
+})
+# convert data to regular format
+X <- do.call(rbind, X)
+y <- do.call(c, y)
+id <- rep(1:nSub, times = N)
+
+# plot data
+par(mfrow = c(1,1), mar = c(4,4,.5,.5))
+clrs <- rep(c("black", "blue", "red", "orange", "green4", "brown"),
+            len = nSub)
+plot(0, type = "n", ylab = expression(y[it]), xlab = expression(t),
+     xlim = c(0, max(N)), ylim = range(sapply(Mu, range), y))
+invisible(sapply(1:nSub, function(ii) {
+  lines(x = 1:N[ii], y = Mu[[ii]], col = clrs[ii], lwd = 2)
+  points(x = 1:N[ii], y = y[id == ii], pch = 16, cex = .8, col = clrs[ii])
+}))
+```
+`r fig_label("Mean and actual response (solid line and points) as a function of $t$ for each subject $i$.", "fig:ex2_data")`
+
+Now, let's implement the (negative) marginal log-posterior $r(\pps \mid \YY, \XX)$ in R and check that it returns exactly the same value as `ModelExt.cpp`.  First a few helper functions:
+
+```{r ex2_help}
+# simulate hyperparameters on the transformed scale
+sim_psi <- function() {
+  gamma <- runif(1)
+  lambda <- rnorm(2)
+  Omega <- crossprod(matrix(rnorm(4), 2, 2))
+  nu <- runif(1, 1, 2)
+  tau <- rexp(1)/5
+  list(gamma = gamma, lambda = lambda,
+       logC_Omega = log_chol(Omega),
+       log_nu = log(nu), log_tau = log(tau))
+}
+# _negative_ marginal log-posterior for ModelExt:
+# R implementation
+mxt_r <- function(psi, id, y, X) {
+  nSub <- length(unique(id))
+  lm <- sapply(1:nSub, function(ii) {
+    # individual covariate and responses
+    Xi <- X[id == ii,]
+    yi <- y[id == ii]
+    # hyperparameters on the regular scale
+    gamma <- psi$gamma
+    lambda <- psi$lambda
+    Omega <- ilog_chol(psi$logC_Omega)
+    nu <- exp(psi$log_nu) * Xi[1,2] # covariate-dependent
+    tau <- exp(psi$log_tau)
+    # covariate matrix
+    Xi <- cbind(1, exp(-gamma * Xi[,1])) # hyperparameter-dependent
+    # posterior mNIX hyperparameters
+    phi_post <- mnix_post(y = yi, X = Xi,
+                          lambda = lambda, Omega = Omega, nu = nu, tau = tau)
+    # marginal likelihood per individual
+    mnix_zeta(Omega = phi_post$Omega, nu = phi_post$nu, tau = phi_post$tau) -
+      mnix_zeta(Omega = Omega, nu = nu, tau = tau)
+  })
+  # default prior
+  lpi <- lchol_prior(ilog_chol(psi$logC_Omega))
+  -(sum(lm) + lpi) # negative loglikelihood
+}
+```
+
+Here's how to create an instance of the **TMB** (negative) marginal log-posterior:
+
+```{r ex2_inst_setup, include = FALSE}
+model_name <- "ModelExt"
+p <- 2
+mxt_tmb <- TMB::MakeADFun(data = c(list(model_name = model_name),
+                                   format_data(id = id, X = X, y = y)),
+                          parameters = list(gamma = 1, lambda = rep(0,p),
+                                            logC_Omega = log_chol(diag(p)),
+                                            log_nu = 0, log_tau = 0),
+                          silent = TRUE, DLL = "losmix_TMBExports")
+```
+```{r ex2_inst, eval = FALSE}
+# _negative marginal logposterior for ModelExt:
+# TMB implementation
+mxt_data <- format_data(id = id, y = y, X = X) # TMB format
+mxt_pars <- sim_psi() # initialize with arbitrary values (placeholders)
+mxt_tmb <- TMB::MakeADFun(data = mxt_data,
+                          parameters = mxt_pars,
+                          DLL = model_name, silent = TRUE)
+```
+
+Now let's check that the R and **TMB** implementations return exactly the same results:
+
+```{r ex2_test}
+replicate(10, expr = {
+  psi <- sim_psi()
+  mxt_r(psi = psi, id = id, y = y, X = X) - mxt_tmb$fn(unlist(psi))
+})
+```
+
+And finally, we can sample from $\hat p(\pps \mid \YY, \XX)$ as before:
+
+```{r ex2_mpost}
+# objective function
+ofun <- function(par) {
+  out <- mxt_tmb$fn(par)
+  attr(out, "gradient") <- mxt_tmb$gr()
+  out
+}
+
+# optimization
+opt <- nlm(p = mxt_tmb$par, f = ofun)
+opt$code # code == 1 means that 'nlm' thinks it converged
+
+# approximate posterior inference
+npost <- 1e4 # number of posterior draws
+psi_mean <- opt$estimate # (approximate) posterior mean
+psi_var <- solveV(mxt_tmb$he(opt$estimate)) # (approximate) posterior variance
+Psi_post <- rmvn(n = npost, mu = psi_mean, Sigma = psi_var)
+```
+
+### `r subsection("Inference for Random Effects", "sec:rx2")`
+
+For simplicity, the simulation of random effects suggested here is slightly different than for the build-in model `mnix_marg` using `mnix_suff`.  That is, the **TMB** model has been set up such that
+```{r, eval = FALSE}
+mxt_tmb$simulate(psi)
+```
+will return one draw from $p(\tth_i \mid \yy_i, \XX_i, \pps)$ for each subject $i$.  Therefore, the following R code produces samples from the approximate random effects distribution $\hat p(\tth_i \mid \YY, \XX)$ \\eqref{eq:repost}:
+
+```{r ex2_rxinst_setup, include = FALSE}
+iSub <- sample(nSub, 1)
+mxt1_tmb  <- TMB::MakeADFun(data = c(list(model_name = model_name),
+                                     format_data(X = X[id == iSub,],
+                                                 y = y[id == iSub])),
+                            parameters = list(gamma = 1, lambda = rep(0,p),
+                                              logC_Omega = log_chol(diag(p)),
+                                              log_nu = 0, log_tau = 0),
+                            silent = TRUE, DLL = "losmix_TMBExports")
+```
+```{r ex2_rxinst, eval = FALSE}
+iSub <- sample(nSub, 1) # pick an observation at random
+# TMB implementation for a single subject
+mxt1_data <- format_data(y = y[id == iSub], X = X[id == iSub,]) # TMB format
+mxt1_tmb <- TMB::MakeADFun(data = mxt1_data,
+                           parameters = sim_psi(), # placeholder
+                           DLL = model_name, silent = TRUE)
+
+```
+```{r ex2_rxpost, fig.width = 7, fig.height = 3.5}
+# simulate from random-effects distribution
+# note: there is no need to convert to original parametrization first
+Thetai_post <- apply(Psi_post, 1, function(psi) mxt1_tmb$simulate(psi))
+# convert from list of lists to list with beta and sigma
+Thetai_post <- unlist_bind(Thetai_post,
+                           name = c("beta", "sigma"), bind = c(cbind, c))
+Thetai_post$beta <- t(Thetai_post$beta) # beta needs to be transposed
+thetai_true <- c(Theta$beta[iSub,], Theta$sigma[iSub]) # true parameter values
+
+# plot
+Thetai_plot <- cbind(Thetai_post$beta, Thetai_post$sigma)
+thetai_names <- c("beta[i1]", "beta[i2]", "sigma[i]")
+par(mfrow = c(1,3), mar = c(2,2,4,.5))
+for(ii in 1:ncol(Thetai_plot)) {
+  # approximate posterior
+  hist(Thetai_plot[,ii], breaks = 40, xlab = "", ylab = "",
+       main = parse(text = paste0("hat(p)(", thetai_names[ii],
+                                  "*\" | \"*bold(Y),bold(X))")))
+  # true parameter value
+  abline(v = thetai_true[ii], col = "red", lwd = 2)
+}
+```
+`r fig_label("Approximate posterior distribution for the random effects of a given subject $i$.", "fig:ex2_rxpost")`
 
 ## `r section("References")`

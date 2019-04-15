@@ -42,7 +42,6 @@ nlp <- mnix_marg(id = id, y = y, X = X)
 ofun <- function(par) {
   out <- nlp$fn(par)
   # include gradient information via 'attribute'
-
   attr(out, "gradient") <- nlp$gr()
   out
 }
@@ -52,7 +51,7 @@ opt <- nlm(p = nlp$par, # starting value
 # gradient at the mode relative to its absolute value
 nlp$gr(opt$estimate)/abs(opt$estimate)
 
-# ## Approximate Bayesian Inference ##
+## Approximate Bayesian Inference ##
 #
 # On transformed scale:
 #
@@ -65,7 +64,7 @@ nlp$gr(opt$estimate)/abs(opt$estimate)
 # - convert output to original scale
 
 # transformed scale simulation
-npost <- 1e4 # number of posterior draws
+npost <- 1e5 # number of posterior draws
 psi_mean <- opt$estimate # posterior mean
 psi_var <- solveV(nlp$he(opt$estimate))
 Psi_post <- rmvn(n = npost, mu = psi_mean, Sigma = psi_var)
@@ -101,38 +100,5 @@ hist(Phi_post$tau,
      main = parse(text = "tau"))
 abline(v = tau, col = "red")
 
-# inference for random effects
+## Inference for Random Effects ##
 
-# simulate data for a new subject
-# (could just as easily use one of the existing subjects,
-#  inference procedure is identical.)
-
-# parameter value for new subject
-thetai <- mnix_sim(1, lambda = lambda, Omega = Omega, nu = nu, tau = tau)
-# data for new subject
-ni <- sample(20:50, 1) # number of observations
-Xi <- matrix(rnorm(ni*p), ni, p)
-yi <- rnorm(ni,
-               mean = c(Xi %*% thetai$beta[1,]),
-               sd = thetai$sigma)
-
-Thetai_post <- mnix_sim(npost,
-                        lambda = Phi_post$lambda, Omega = Phi_post$Omega,
-                        nu = Phi_post$nu, tau = Phi_post$tau,
-                        y = yi, X = Xi)
-
-# plot (approximate) posterior distributions
-# true parameter values are plotted in red
-par(mfrow = c(2,2))
-# beta
-for(ii in 1:p) {
-  hist(Thetai_post$beta[,ii],
-       freq = FALSE, breaks = 50, xlab = "",
-       main = parse(text = paste0("beta[", ii, "]")))
-  abline(v = thetai$beta[ii], col = "red")
-}
-# sigma
-hist(Thetai_post$sigma,
-     freq = FALSE, breaks = 50, xlab = "",
-     main = parse(text = "sigma"))
-abline(v = thetai$sigma, col = "red")

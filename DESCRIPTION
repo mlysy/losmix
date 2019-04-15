@@ -10,7 +10,7 @@ Description: Tools for fitting Gaussian linear mixed-effects models where both t
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Imports: TMB
+Imports: TMB, stats
 LinkingTo: TMB
 Suggests: 
     testthat,

@@ -23,8 +23,13 @@ ivec_phi <- function(psi) {
   p <- (-3 + sqrt(9 + 8*(ncol(psi)-2)))/2
   lambda <- psi[,1:p]
   logC <- psi[,p+1:(p*(p+1)/2),drop=FALSE]
-  Omega <- apply(logC, 1, ilog_chol)
-  Omega <- drop(array(Omega, dim = c(p, p, length(Omega)/p^2)))
+  ilc <- TMB::MakeADFun(data = list(model_name = "ilog_chol",
+                                    logC = t(logC)),
+                        parameters = list(theta = 0),
+                        silent = TRUE, DLL = "losmix_TMBExports")
+  Omega <- ilc$simulate()$V
+  ## Omega2 <- apply(logC, 1, ilog_chol)
+  Omega <- drop(array(Omega, dim = c(p, p, nrow(psi))))
   nu <- exp(psi[,p*(p+3)/2+1])
   tau <- exp(psi[,p*(p+3)/2+2])
   list(lambda = lambda, Omega = Omega, nu = nu, tau = tau)

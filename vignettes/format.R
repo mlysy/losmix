@@ -97,7 +97,9 @@ set_label <- function(ref, label, anchor) {
     colnames(labels)[1] <- label
   }
   .internal_labels$labels <<- labels
-  saveRDS(.internal_labels, file = "internal_labels.rds")
+  if(!identical(labels, readRDS("internal_labels.rds")$labels)) {
+    saveRDS(.internal_labels, file = "internal_labels.rds")
+  }
   ## attr(set_label, "labels") <<- c(attr(set_label, "labels"), label = ref)
   invisible(NULL)
 }

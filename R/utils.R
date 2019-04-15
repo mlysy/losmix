@@ -17,6 +17,22 @@ solveV <- function(V, b, ldV = FALSE) {
   ans
 }
 
+#' Convert list of lists into list of arrays.
+#'
+#' @param x List of (named) lists.
+#' @param name Character vector of inner list elements to bind.  If missing defaults to every element of the inner list.
+#' @param bind List of binding functions (e.g., \code{c}, \code{cbind}, etc.) the same length as \code{name}.  If missing defaults to \code{rep(c, length(name))}.
+#' @return A named list with elements corresponding to the binded values of the inner elements of \code{x}.
+#' @example examples/unlist_bind.R
+#' @export
+unlist_bind <- function(x, name, bind) {
+  if(missing(name)) name <- names(x[[1]])
+  if(missing(bind)) bind <- rep(c, length(name))
+  mapply(function(name, bind) {
+    do.call(bind, lapply(setNames(x, NULL), function(ls) ls[[name]]))
+  }, name = name, bind = bind, SIMPLIFY = FALSE)
+}
+
 
 #' Format data for \pkg{TMB} calculations.
 #'

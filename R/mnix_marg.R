@@ -21,6 +21,8 @@
 #' \preformatted{
 #' pi(psi) \propto prod( diag(chol(Omega))^(p-(1:p)) ).
 #' }
+#'
+#' \code{mnix_marg} can also be used to simulate random effects \code{beta_i, sigma_i)} for each subject, using the \code{simulate()} method of the \code{TMB::MakeADFun} return object (see \strong{Examples}).
 #' @example examples/mnix_marg.R
 #' @export
 mnix_marg <- function(id, y, X) {
