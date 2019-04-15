@@ -4,7 +4,7 @@
 \alias{mnix_sim}
 \title{Genenerate random draws from the mNIX distribution.}
 \usage{
-mnix_sim(n, lambda, Omega, nu, tau, y, X)
+mnix_sim(n, lambda, Omega, nu, tau, y, X, id)
 }
 \arguments{
 \item{n}{Number of random draws (integer).}
@@ -17,13 +17,18 @@ mnix_sim(n, lambda, Omega, nu, tau, y, X)
 
 \item{tau}{Scale parameter.  A scalar or a vector of length \code{n}.}
 
-\item{y}{Optional response vector of length \code{N} for one subject.}
+\item{y}{Optional response vector of length \code{N} (see \strong{Details}).}
 
-\item{X}{Optional covariate matrix of size \code{N x p} for one subject.}
+\item{X}{Optional covariate matrix of size \code{N x p} (see \strong{Details}).}
+
+\item{id}{Optional subject identifier vector of length \code{N} with \code{nsub <= N} distinct elements (see \strong{Details}).}
 }
 \value{
 A list with elements \code{beta} and \code{sigma} of size \code{n x p} and length \code{n}, respectively.
 }
 \description{
 Genenerate random draws from the mNIX distribution.
+}
+\details{
+If \code{y}, \code{X} and \code{id} are unspecified, then \code{(beta, sigma)} are drawn from \code{mNIX(lambda, Omega, nu, tau)}.  Otherwise, they are drawn from the posterior mNIX distribution \code{p(beta, sigma | y, X, id, lambda, Omega, nu, tau)}.  In this case, the number of subjects \code{nsub} must be \code{n} or \code{1}.
 }

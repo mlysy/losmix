@@ -1,5 +1,5 @@
-## require(losmix)
-## require(testthat)
+require(losmix)
+require(testthat)
 source("losmix-testfunctions.R")
 
 
@@ -87,5 +87,33 @@ test_that("R == TMB: posterior mNIX, multiple params", {
     Phi_tmb$Omega <- array(Phi_tmb$Omega, c(p,p,n))
     theta_tmb <- do.call(mnix_sim, c(list(n = n, y = y, X = X), Phi_tmb))
     expect_equal(theta_tmb, theta_r)
+  }
+})
+
+
+test_that("mnix_sim and mnix_marg$simulate give identical resuls", {
+  seeds <- sample(1000,ntests)
+  for(ii in 1:ntests) {
+    M <- sample(1:5, 1)
+    N <- sample(10:20, M, replace = TRUE)
+    p <- sample(1:5, 1)
+    X <- do.call(rbind, lapply(N, sim_X, p = p))
+    y <- do.call(c, lapply(N, sim_y))
+    id <- rep(1:M, times = N)
+    n <- sample(1:5, 1)
+    Phi <- replicate(n, sim_Phi(p), simplify = FALSE)
+    # mnix_sim calculation
+    set.seed(seeds[ii])
+    Theta_sim <- lapply(Phi, function(phi) {
+      do.call(mnix_sim, c(list(n = M, y = y, X = X, id = id), phi))
+    })
+    # mnix_marg calculation
+    set.seed(seeds[ii])
+    nll <- mnix_marg(id = id, y = y, X = X)
+    Theta_marg <- apply(sapply(Phi, vec_phi), 2, function(psi) {
+      ans <- nll$simulate(psi)
+      list(beta = t(ans$beta), sigma = ans$sigma)
+    })
+    expect_equal(Theta_sim, Theta_marg)
   }
 })

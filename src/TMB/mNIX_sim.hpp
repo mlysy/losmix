@@ -30,6 +30,7 @@ Type mNIX_sim(objective_function<Type>* obj) {
     mNIX<Type> mnix(p);
     Eigen::LLT<Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> > llt(p);
     // determine whether each input is single or vectorized
+    bool vData = nObs.size() > 1;
     bool vLambda = lambda.cols() > 1;
     bool vOmega = Omega.cols() > p;
     bool vNu = nu.size() > 1;
@@ -46,11 +47,16 @@ Type mNIX_sim(objective_function<Type>* obj) {
       }
     } else {
       // posterior mNIX simulation
-      mnix.set_suff(y, Xtr);
       for(int ii=0; ii<nOut; ii++) {
+	if(vData || ii == 0) {
+	  mnix.set_suff(y.block(iStart[ii],0,nObs[ii],1),
+			Xtr.block(0,iStart[ii],p,nObs[ii]));
+	}
 	if(vPars || ii == 0) {
 	  mnix.set_prior(lambda.col(vLambda*ii),Omega.block(0,vOmega*p*ii,p,p),
 			nu(vNu*ii), tau(vTau*ii));
+	}
+	if(vPars || vData || ii == 0) {
 	  mnix.calc_post();
 	}
 	mnix.simulate(beta.col(ii), sigma(ii));
