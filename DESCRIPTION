@@ -1,12 +1,12 @@
 Package: losmix
-Title: Location-Scale Mixed-Effects Models
+Title: Inference for Gaussian Location-Scale Mixed-Effects Models
 Version: 0.0.1
 Authors@R: 
     person(given = "Martin",
            family = "Lysy",
            role = c("aut", "cre"),
            email = "mlysy@uwaterloo.ca")
-Description: Tools for fitting Gaussian linear mixed-effects models where both the mean and variance terms can be random.
+Description: Tools for fitting Gaussian linear mixed-effects models where both the mean and variance terms are random.  Marginal likelihoods are compiled in C++ with automatic differentiation using the 'TMB' library, such that efficient gradient-based optimization algorithms can be readily employed.  The package provides C++ entry points for users to extend the basic model with minimal effort.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
