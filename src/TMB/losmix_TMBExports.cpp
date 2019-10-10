@@ -12,23 +12,23 @@
 
 template<class Type>
 Type objective_function<Type>::operator() () {
-  DATA_STRING(model_name);
-  if(model_name == "ilog_chol") {
+  DATA_STRING(model);
+  if(model == "ilog_chol") {
     return ilog_chol(this);
-  } else if(model_name == "mNIX_marg") {
+  } else if(model == "mNIX_marg") {
     return mNIX_marg(this);
-  } else if(model_name == "mNIX_NLL") {
+  } else if(model == "mNIX_NLL") {
     return mNIX_NLL(this);
-  } else if(model_name == "mNIX_post") {
+  } else if(model == "mNIX_post") {
     return mNIX_post(this);
-  } else if(model_name == "mNIX_sim") {
+  } else if(model == "mNIX_sim") {
     return mNIX_sim(this);
-  } else if(model_name == "mNIX_suff") {
+  } else if(model == "mNIX_suff") {
     return mNIX_suff(this);
-  } else if(model_name == "ModelExt") {
+  } else if(model == "ModelExt") {
     return ModelExt(this);
   } else {
-    error("Unknown model_name.");
+    error("Unknown model.");
   }
   return 0;
 }

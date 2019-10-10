@@ -20,7 +20,7 @@ mnix_post <- function(id, y, X, lambda, Omega, nu, tau) {
     stop("parameter size incompatible with length(unique(id)).")
   }
   opars$nOut <- max(n)
-  odata <- c(list(model_name = "mNIX_post"), odata, opars)
+  odata <- c(list(model = "mNIX_post"), odata, opars)
   obj <- TMB::MakeADFun(data = odata, parameters = list(theta = 0),
                         silent = TRUE, DLL = "losmix_TMBExports")
   out <- obj$simulate()

@@ -103,7 +103,7 @@ replicate(10, expr = {
   mxt_marg(psi = psi, id = id, y = y, X = X) - nll_tmb$fn(unlist(psi))
 })
 
-nll_sim <- TMB::MakeADFun(data = c(list(model_name = "ModelExt_marg"),
+nll_sim <- TMB::MakeADFun(data = c(list(model = "ModelExt_marg"),
                                    format_data(y = y[id == 1],
                                                X = X[id == 1,])),
                           parameters = sim_psi(),

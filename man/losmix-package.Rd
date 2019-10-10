@@ -4,9 +4,17 @@
 \name{losmix-package}
 \alias{losmix}
 \alias{losmix-package}
-\title{losmix: Location-Scale Mixed-Effects Models}
+\title{losmix: Inference for Gaussian Location-Scale Mixed-Effects Models}
 \description{
-Tools for fitting Gaussian linear mixed-effects models where both the mean and variance terms can be random.
+Tools for fitting Gaussian linear mixed-effects models where both the mean and variance terms are random.  Marginal likelihoods are compiled in C++ with automatic differentiation using the 'TMB' library, such that efficient gradient-based optimization algorithms can be readily employed.  The package provides C++ entry points for users to extend the basic model with minimal effort.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/mlysy/losmix/}
+  \item Report bugs at \url{https://github.com/mlysy/losmix/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Martin Lysy \email{mlysy@uwaterloo.ca}

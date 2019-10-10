@@ -23,7 +23,7 @@ ivec_phi <- function(psi) {
   p <- (-3 + sqrt(9 + 8*(ncol(psi)-2)))/2
   lambda <- psi[,1:p]
   logC <- psi[,p+1:(p*(p+1)/2),drop=FALSE]
-  ilc <- TMB::MakeADFun(data = list(model_name = "ilog_chol",
+  ilc <- TMB::MakeADFun(data = list(model = "ilog_chol",
                                     logC = t(logC)),
                         parameters = list(theta = 0),
                         silent = TRUE, DLL = "losmix_TMBExports")

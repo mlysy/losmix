@@ -12,7 +12,7 @@
 #' @export
 mnix_suff <- function(id, y, X) {
   # convert to TMB input
-  odata <- c(list(model_name = "mNIX_suff"), format_data(id = id, y = y, X = X))
+  odata <- c(list(model = "mNIX_suff"), format_data(id = id, y = y, X = X))
   opars <- list(theta = 0)
   obj <- TMB::MakeADFun(data = odata, parameters = opars,
                         silent = TRUE, DLL = "losmix_TMBExports")

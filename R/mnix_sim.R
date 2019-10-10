@@ -30,7 +30,7 @@ mnix_sim <- function(n, lambda, Omega, nu, tau, y, X, id) {
     stop("parameter and/or data size incompatible with n.")
   }
   opars$nOut <- max(n)
-  odata <- c(list(model_name = "mNIX_sim", doPost = do_post), odata, opars)
+  odata <- c(list(model = "mNIX_sim", doPost = do_post), odata, opars)
   obj <- TMB::MakeADFun(data = odata, parameters = list(theta = 0),
                         silent = TRUE, DLL = "losmix_TMBExports")
   out <- obj$simulate()

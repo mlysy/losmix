@@ -15,7 +15,7 @@ test_that("Sufficient statistics are the same in R and TMB", {
     y <- sim_y(N)
     odata <- list(Xtr = t(X), y = as.matrix(y))
     opars <- Phi2par(Phi = sim_Phi(p))
-    obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
+    obj <- TMB::MakeADFun(data = c(list(model = "mNIX_NLL"), odata),
                           parameters = opars,
                           DLL = "losmix_TMBExports", silent = TRUE)
     suff_r <- get_suff(y, X)
@@ -36,7 +36,7 @@ test_that("Conjugate posterior hyperparameters are the same in R and TMB", {
     Phi <- sim_Phi(p)
     odata <- list(Xtr = t(X), y = as.matrix(y))
     opars <- Phi2par(sim_Phi(p))
-    obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
+    obj <- TMB::MakeADFun(data = c(list(model = "mNIX_NLL"), odata),
                           parameters = opars,
                           DLL = "losmix_TMBExports", silent = TRUE)
     Phi_hat_r <- get_post(suff = get_suff(y, X), Phi = Phi)
@@ -67,7 +67,7 @@ test_that("R(loglik + lprior) = TMB(lmarg + lcond)", {
     Phi <- sim_Phi(p)
     odata <- list(Xtr = t(X), y = as.matrix(y))
     opars <- Phi2par(sim_Phi(p))
-    obj <- TMB::MakeADFun(data = c(list(model_name = "mNIX_NLL"), odata),
+    obj <- TMB::MakeADFun(data = c(list(model = "mNIX_NLL"), odata),
                           parameters = opars,
                           DLL = "losmix_TMBExports", silent = TRUE)
     Phi_hat <- obj$simulate(par = vec_phi(Phi)) # conjugate posterior

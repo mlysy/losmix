@@ -129,13 +129,13 @@ Type ModelExt_sim(objective_function<Type>* obj) {
 
 template<class Type>
 Type objective_function<Type>::operator() () {
-  DATA_STRING(model_name);
-  if(model_name == "ModelExt_marg") {
+  DATA_STRING(model);
+  if(model == "ModelExt_marg") {
     return ModelExt_marg(this);
-  } else if(model_name == "ModelExt_sim") {
+  } else if(model == "ModelExt_sim") {
     return ModelExt_sim(this);
   } else {
-    error("Unknown model_name.");
+    error("Unknown model.");
   }
   return 0;
 }

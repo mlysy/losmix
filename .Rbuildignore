@@ -3,3 +3,4 @@
 ^man-roxygen$
 ^examples$
 ^tests/dontrun$
+^README.md$
