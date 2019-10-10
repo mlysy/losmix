@@ -17,4 +17,4 @@ devtools::install_github("mlysy/losmix")
 
 ### Usage
 
-Please see package vignette: `vignette("losmix")`.
+Please see package [vignette](http://htmlpreview.github.io/?https://github.com/mlysy/losmix/master/doc/losmix.html).
