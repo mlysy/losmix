@@ -1,4 +1,4 @@
-## ----setup, include = FALSE----------------------------------------------
+## ----setup, include = FALSE---------------------------------------------------
 suppressMessages({
   require(losmix)
   require(TMB)
@@ -6,7 +6,7 @@ suppressMessages({
 source("format.R")
 knitr::opts_chunk$set(comment = NA)
 
-## ----ex1_sim-------------------------------------------------------------
+## ----ex1_sim------------------------------------------------------------------
 require(losmix)
 
 set.seed(1234) # reproducible results
@@ -38,12 +38,12 @@ y <- do.call(c, y)
 # subject identifiers
 id <- rep(1:nSub, times = N)
 
-## ----ex1_nlp-------------------------------------------------------------
+## ----ex1_nlp------------------------------------------------------------------
 # marginal posterior distribution
 nlp <- mnix_marg(id = id, y = y, X = X)
 names(nlp)
 
-## ----ex1_fit, warning = FALSE--------------------------------------------
+## ----ex1_fit, warning = FALSE-------------------------------------------------
 # objective function
 ofun <- function(par) {
   out <- nlp$fn(par)
@@ -57,17 +57,17 @@ opt <- nlm(p = nlp$par, # starting value (losmix picks a reasonable default)
            f = ofun) # objective function
 opt$code # code == 1 means that 'nlm' thinks it converged
 
-## ----ex1_grad_check------------------------------------------------------
+## ----ex1_grad_check-----------------------------------------------------------
 disp <- rbind(est = opt$estimate, # potential solution
               grad = opt$gradient, # gradient at the potential solution
               rel = opt$gradient/abs(opt$estimate)) # relative size
 signif(disp, 2)
 
-## ----ex1_hess------------------------------------------------------------
+## ----ex1_hess-----------------------------------------------------------------
 psi_mean <- opt$estimate # (approximate) posterior mean of p(psi | Y, X)
 psi_var <- solveV(nlp$he(opt$estimate)) # (approximate) posterior variance
 
-## ----ex1_mpost, fig.width = 7, fig.height = 5----------------------------
+## ----ex1_mpost, fig.width = 7, fig.height = 5---------------------------------
 # Step 2: sample from p_hat(psi | Y, X)
 
 npost <- 1e4 # number of posterior draws
@@ -111,7 +111,7 @@ legend("bottom", inset = .05,
        lwd = c(NA, 2), pch = c(22, NA), seg.len = 1.5,
        col = c("black", "red"), bg = c("white", NA), cex = .85)
 
-## ----ex1_rxpost, fig.width = 7, fig.height = 5---------------------------
+## ----ex1_rxpost, fig.width = 7, fig.height = 5--------------------------------
 # inference for random effects
 
 iSub <- sample(nSub, 1) # pick a subject at random
@@ -148,14 +148,14 @@ for(ii in 1:ncol(Thetai_plot)) {
   abline(v = thetai_true[ii], col = "red", lwd = 2)
 }
 
-## ----ex2_dir, echo = 2, results = "hide"---------------------------------
+## ----ex2_dir, echo = 2, results = "hide"--------------------------------------
 mxt_file <- system.file("include", "losmix", "ModelExt.cpp", package = "losmix")
 system.file("include", "losmix", "ModelExt.cpp", package = "losmix")
 
-## ---- echo = FALSE, results = "asis"-------------------------------------
+## ---- echo = FALSE, results = "asis"------------------------------------------
 cat("```cpp", readLines(mxt_file), "```", sep = "\n")
 
-## ----ex2_compile, eval = FALSE-------------------------------------------
+## ----ex2_compile, eval = FALSE------------------------------------------------
 #  require(TMB)
 #  
 #  model_name <- "ModelExt"
@@ -166,7 +166,7 @@ cat("```cpp", readLines(mxt_file), "```", sep = "\n")
 #               PKG_CXXFLAGS = paste0('-I"', include_path, '"'))
 #  dyn.load(TMB::dynlib(model_name))
 
-## ----ex2_data, fig.width = 7, fig.height = 4-----------------------------
+## ----ex2_data, fig.width = 7, fig.height = 4----------------------------------
 nSub <- 10 # number of subjects
 N <- sample(20:50, nSub, replace = TRUE) # observations per subject
 
@@ -211,7 +211,7 @@ invisible(sapply(1:nSub, function(ii) {
   points(x = 1:N[ii], y = y[id == ii], pch = 16, cex = .8, col = clrs[ii])
 }))
 
-## ----ex2_help------------------------------------------------------------
+## ----ex2_help-----------------------------------------------------------------
 # simulate hyperparameters on the transformed scale
 sim_psi <- function() {
   gamma <- runif(1)
@@ -251,7 +251,7 @@ mxt_r <- function(psi, id, y, X) {
   -(sum(lm) + lpi) # negative loglikelihood
 }
 
-## ----ex2_inst_setup, include = FALSE-------------------------------------
+## ----ex2_inst_setup, include = FALSE------------------------------------------
 model_name <- "ModelExt"
 p <- 2
 mxt_tmb <- TMB::MakeADFun(data = c(list(model = model_name),
@@ -261,7 +261,7 @@ mxt_tmb <- TMB::MakeADFun(data = c(list(model = model_name),
                                             log_nu = 0, log_tau = 0),
                           silent = TRUE, DLL = "losmix_TMBExports")
 
-## ----ex2_inst, eval = FALSE----------------------------------------------
+## ----ex2_inst, eval = FALSE---------------------------------------------------
 #  # _negative marginal logposterior for ModelExt:
 #  # TMB implementation
 #  mxt_data <- format_data(id = id, y = y, X = X) # TMB format
@@ -270,13 +270,13 @@ mxt_tmb <- TMB::MakeADFun(data = c(list(model = model_name),
 #                            parameters = mxt_pars,
 #                            DLL = model_name, silent = TRUE)
 
-## ----ex2_test------------------------------------------------------------
+## ----ex2_test-----------------------------------------------------------------
 replicate(10, expr = {
   psi <- sim_psi()
   mxt_r(psi = psi, id = id, y = y, X = X) - mxt_tmb$fn(unlist(psi))
 })
 
-## ----ex2_mpost-----------------------------------------------------------
+## ----ex2_mpost----------------------------------------------------------------
 # objective function
 ofun <- function(par) {
   out <- mxt_tmb$fn(par)
@@ -294,10 +294,10 @@ psi_mean <- opt$estimate # (approximate) posterior mean
 psi_var <- solveV(mxt_tmb$he(opt$estimate)) # (approximate) posterior variance
 Psi_post <- rmvn(n = npost, mu = psi_mean, Sigma = psi_var)
 
-## ---- eval = FALSE-------------------------------------------------------
+## ---- eval = FALSE------------------------------------------------------------
 #  mxt_tmb$simulate(psi)
 
-## ----ex2_rxinst_setup, include = FALSE-----------------------------------
+## ----ex2_rxinst_setup, include = FALSE----------------------------------------
 iSub <- sample(nSub, 1)
 mxt1_tmb  <- TMB::MakeADFun(data = c(list(model = model_name),
                                      format_data(X = X[id == iSub,],
@@ -307,7 +307,7 @@ mxt1_tmb  <- TMB::MakeADFun(data = c(list(model = model_name),
                                               log_nu = 0, log_tau = 0),
                             silent = TRUE, DLL = "losmix_TMBExports")
 
-## ----ex2_rxinst, eval = FALSE--------------------------------------------
+## ----ex2_rxinst, eval = FALSE-------------------------------------------------
 #  iSub <- sample(nSub, 1) # pick an observation at random
 #  # TMB implementation for a single subject
 #  mxt1_data <- format_data(y = y[id == iSub], X = X[id == iSub,]) # TMB format
@@ -316,7 +316,7 @@ mxt1_tmb  <- TMB::MakeADFun(data = c(list(model = model_name),
 #                             DLL = model_name, silent = TRUE)
 #  
 
-## ----ex2_rxpost, fig.width = 7, fig.height = 3.5-------------------------
+## ----ex2_rxpost, fig.width = 7, fig.height = 3.5------------------------------
 # simulate from random-effects distribution
 # note: there is no need to convert to original parametrization first
 Thetai_post <- apply(Psi_post, 1, function(psi) mxt1_tmb$simulate(psi))

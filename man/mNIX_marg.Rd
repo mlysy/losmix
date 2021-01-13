@@ -137,7 +137,7 @@ for(ii in 1:ncol(Phi_plot)) {
   # approximate posterior
   hist(Phi_plot[,ii], breaks = 40, xlab = "", ylab = "",
        main = parse(text = paste0("hat(p)(", phi_names[ii],
-                                  "*\\" | \\"*bold(Y),bold(X))")))
+                                  "*\" | \"*bold(Y),bold(X))")))
   # true parameter value
   abline(v = phi_true[ii], col = "red", lwd = 2)
 }
@@ -191,7 +191,7 @@ for(ii in 1:ncol(Thetai_plot)) {
   # approximate posterior
   hist(Thetai_plot[,ii], breaks = 40, xlab = "", ylab = "",
        main = parse(text = paste0("hat(p)(", thetai_names[ii],
-                                  "*\\" | \\"*bold(Y),bold(X))")))
+                                  "*\" | \"*bold(Y),bold(X))")))
   # true parameter value
   abline(v = thetai_true[ii], col = "red", lwd = 2)
 }
